@@ -118,29 +118,43 @@ function App() {
     renderChat();
   }, [curSession, sessions]);
 
-  const send = () => {
-    const t = inputText.trim();
-    if (!t) return;
-    const um = t.match(/(https?:\/\/[^\s]+)/);
-    let link = null;
-    let text = t;
-    if (um) { link = um[1]; text = t.replace(um[1], '').trim(); }
-    const newMsgs = [...sessions[curSession].msgs, { role: 'me', text, link, time: nowTime() }];
-    const newSessions = [...sessions];
-    newSessions[curSession] = { ...newSessions[curSession], msgs: newMsgs };
-    setSessions(newSessions);
-    setInputText('');
-    setTimeout(() => {
-      renderChat();
-      const rs = ['嗯。', '我在。', '继续说。', '好。', '看到了。', '有点想你。'];
-      const replyMsgs = [...newMsgs, { role: 'other', text: rs[Math.floor(Math.random() * rs.length)], time: nowTime() }];
-      const replySessions = [...newSessions];
-      replySessions[curSession] = { ...replySessions[curSession], msgs: replyMsgs };
-      setSessions(replySessions);
-      setTimeout(renderChat, 0);
-    }, 500 + Math.random() * 600);
-  };
+  const send = async () => {
+  const text = inputText.trim();
+  if (!text) return;
 
+  // 1. 显示用户消息
+  const userMsg = { role: 'me', text, time: nowTime() };
+  const newMsgs = [...sessions[curSession].msgs, userMsg];
+  const newSessions = [...sessions];
+  newSessions[curSession] = { ...newSessions[curSession], msgs: newMsgs };
+  setSessions(newSessions);
+  setInputText('');
+  setTimeout(renderChat, 0);
+
+  // 2. 发送到后端
+  try {
+    const response = await fetch('http://43.155.141.249:3000/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text })
+    });
+    const data = await response.json();
+
+    // 3. 显示后端回复
+    const replyMsg = { role: 'other', text: data.reply || '抱歉，暂时没有回复', time: nowTime() };
+    const replySessions = [...newSessions];
+    replySessions[curSession] = { ...replySessions[curSession], msgs: [...newMsgs, replyMsg] };
+    setSessions(replySessions);
+    setTimeout(renderChat, 0);
+  } catch (error) {
+    console.error('后端请求失败:', error);
+    const errorMsg = { role: 'other', text: '⚠️ 连接服务器失败，请检查网络', time: nowTime() };
+    const errorSessions = [...newSessions];
+    errorSessions[curSession] = { ...errorSessions[curSession], msgs: [...newMsgs, errorMsg] };
+    setSessions(errorSessions);
+    setTimeout(renderChat, 0);
+  }
+};
   const handleFile = (e) => {
     const f = e.target.files[0];
     if (!f) return;
