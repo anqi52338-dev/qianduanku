@@ -74,6 +74,7 @@ function App() {
 
   // ========== 核心发送函数 ==========
   const send = async () => {
+    console.log('send 被触发了！');
     const text = inputText.trim();
     if (!text) return;
 
@@ -86,9 +87,9 @@ function App() {
     setInputText('');
     setTimeout(renderChat, 0);
 
-    // 发送到后端
+    // 发送到后端（使用域名）
     try {
-      const response = await fetch('http://43.155.141.249:3000/chat', {
+      const response = await fetch('https://homehomeanan.icu/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text })
@@ -164,7 +165,14 @@ function App() {
 
         <div className="input-area">
           <div className="input-row">
-            <input type="text" id="input" placeholder="记录此刻的想法…" value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') send(); }} />
+            <input
+              type="text"
+              id="input"
+              placeholder="记录此刻的想法…"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') send(); }}
+            />
             <button className="send-circle" onClick={send}>➤</button>
           </div>
           <div className="tool-row">
