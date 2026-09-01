@@ -15,7 +15,7 @@ function App() {
   const [stickersHis, setStickersHis] = useState([]);
   const [pendingSticker, setPendingSticker] = useState(null);
   const [momentFeed, setMomentFeed] = useState([
-    { who: 'him', text: '今天帮 Honey 搭了我们的家，粉粉的。', img: null, time: '今天 10:05', comments: [{ who: 'me', text: '喜欢～' }] }
+    { who: 'him', text: '今天帮 Honey 搭了我们的家，粉粉的。', img: null, time: '今天 10:05', comments: [] }
   ]);
   const [momentText, setMomentText] = useState('');
   const [momentImgData, setMomentImgData] = useState(null);
@@ -29,6 +29,7 @@ function App() {
   const [stickerTab, setStickerTab] = useState(0);
   const [toastMsg, setToastMsg] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState('');
   const chatAreaRef = useRef(null);
   const fileInputRef = useRef(null);
   const avatarMeRef = useRef(null);
@@ -70,6 +71,53 @@ function App() {
     });
     area.innerHTML = html;
     area.scrollTop = area.scrollHeight;
+  };
+
+  const testConnection = async () => {
+    const baseUrl = document.getElementById('apiBaseUrl').value.trim();
+    const apiKey = document.getElementById('apiKeyInput').value.trim();
+    const model = document.getElementById('modelInput').value.trim();
+    const resultEl = document.getElementById('connectionResult');
+
+    if (!baseUrl || !apiKey || !model) {
+      resultEl.innerHTML = '⚠️ 请先填完整 BaseURL、API Key 和模型名';
+      resultEl.style.color = '#e74c3c';
+      return;
+    }
+
+    resultEl.innerHTML = '⏳ 正在测试连接...';
+    resultEl.style.color = '#f39c12';
+
+    try {
+      const response = await fetch('https://homehomeanan.icu/test-model', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ baseUrl, apiKey, model })
+      });
+      const data = await response.json();
+      if (data.success) {
+        resultEl.innerHTML = '✅ 连接成功！模型可用';
+        resultEl.style.color = '#27ae60';
+      } else {
+        resultEl.innerHTML = '❌ 连接失败：' + (data.error || '未知错误');
+        resultEl.style.color = '#e74c3c';
+      }
+    } catch (err) {
+      resultEl.innerHTML = '❌ 连接失败：' + err.message;
+      resultEl.style.color = '#e74c3c';
+    }
+  };
+
+  const saveSettings = () => {
+    const baseUrl = document.getElementById('apiBaseUrl').value.trim();
+    const apiKey = document.getElementById('apiKeyInput').value.trim();
+    const model = document.getElementById('modelInput').value.trim();
+    localStorage.setItem('apiBaseUrl', baseUrl);
+    localStorage.setItem('apiKey', apiKey);
+    localStorage.setItem('model', model);
+    document.getElementById('modelChip').textContent = model || '未配置';
+    showToast('设置已保存');
+    setActivePage(null);
   };
 
   const send = async () => {
@@ -241,7 +289,6 @@ function App() {
           </div>
         </div>
 
-        {/* ===== 设置页面 ===== */}
         <div className={`page ${activePage === 'settings' ? 'show' : ''}`}>
           <div className="page-head">
             <button className="back" onClick={() => setActivePage(null)}>← 返回</button>
@@ -256,39 +303,25 @@ function App() {
 
             <div className="card">
               <h4>API 配置</h4>
-              <label>选择模型</label>
-              <select id="modelSelect" defaultValue={localStorage.getItem('model') || 'deepseek-chat'}>
-                <option value="deepseek-chat">DeepSeek Chat</option>
-                <option value="gpt-4o">GPT-4o</option>
-                <option value="gpt-4o-mini">GPT-4o Mini</option>
-                <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
-                <option value="claude-opus">Claude Opus</option>
-                <option value="grok">Grok</option>
-                <option value="custom">自定义</option>
-              </select>
+              <label>API 地址（BaseURL）</label>
+              <input type="text" id="apiBaseUrl" placeholder="https://api.你的站子.com/v1" defaultValue={localStorage.getItem('apiBaseUrl') || ''} />
 
               <label>API Key</label>
               <input type="password" id="apiKeyInput" placeholder="sk-..." defaultValue={localStorage.getItem('apiKey') || ''} />
 
-              <label>API 地址（可选）</label>
-              <input type="text" id="apiBaseUrl" placeholder="https://api.deepseek.com/v1" defaultValue={localStorage.getItem('apiBaseUrl') || 'https://api.deepseek.com/v1'} />
-            </div>
+              <label>模型名称</label>
+              <input type="text" id="modelInput" placeholder="例如：gpt-4o / claude-3-5-sonnet" defaultValue={localStorage.getItem('model') || 'deepseek-chat'} />
 
-            <button className="save-btn" onClick={() => {
-              const model = document.getElementById('modelSelect').value;
-              const apiKey = document.getElementById('apiKeyInput').value;
-              const apiBaseUrl = document.getElementById('apiBaseUrl').value || 'https://api.deepseek.com/v1';
-              localStorage.setItem('model', model);
-              localStorage.setItem('apiKey', apiKey);
-              localStorage.setItem('apiBaseUrl', apiBaseUrl);
-              document.getElementById('modelChip').textContent = model;
-              showToast('设置已保存');
-              setActivePage(null);
-            }}>保存设置</button>
+              <div id="connectionResult" style={{ marginTop: '8px', fontSize: '13px', color: 'var(--text-light)' }}></div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                <button className="save-btn" style={{ flex: 1 }} onClick={testConnection}>测试连接</button>
+                <button className="save-btn" style={{ flex: 1 }} onClick={saveSettings}>保存设置</button>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* ===== 记忆页面 ===== */}
         <div className={`page ${activePage === 'memory' ? 'show' : ''}`}>
           <div className="page-head"><button className="back" onClick={() => setActivePage(null)}>← 返回</button><div className="ptitle">记忆</div><div style={{ width: '60px' }}></div></div>
           <div className="page-body">
@@ -297,7 +330,6 @@ function App() {
           </div>
         </div>
 
-        {/* ===== Home 页面（含日记） ===== */}
         <div className={`page ${activePage === 'home' ? 'show' : ''}`}>
           <div className="page-head"><button className="back" onClick={() => setActivePage(null)}>← 返回</button><div className="ptitle">Home</div><div style={{ width: '60px' }}></div></div>
           <div className="page-body">
@@ -315,13 +347,18 @@ function App() {
           </div>
         </div>
 
-        {/* ===== 朋友圈页面 ===== */}
         <div className={`page ${activePage === 'moments' ? 'show' : ''}`}>
           <div className="page-head"><button className="back" onClick={() => setActivePage(null)}>← 返回</button><div className="ptitle">朋友圈</div><div style={{ width: '60px' }}></div></div>
           <div className="page-body">
             <div className="card">
-              <textarea placeholder="这一刻的想法…" value={momentText} onChange={(e) => setMomentText(e.target.value)} style={{ width: '100%', minHeight: '60px', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 12px', fontSize: '14px', fontFamily: 'inherit', background: 'var(--pink-soft)', outline: 'none', resize: 'vertical', marginBottom: '10px' }}></textarea>
-              <button onClick={() => { if (!momentText.trim()) { showToast('写点什么'); return; } setMomentFeed([{ who: 'me', text: momentText.trim(), img: null, time: '刚刚', comments: [] }, ...momentFeed]); setMomentText(''); showToast('已发布'); }} style={{ padding: '8px 16px', background: 'var(--pink-deep)', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '13px', cursor: 'pointer' }}>发布</button>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginBottom: '10px' }}>
+                <textarea id="momentText" placeholder="这一刻的想法…" value={momentText} onChange={(e) => setMomentText(e.target.value)} style={{ flex: 1, minHeight: '60px', margin: 0, border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 12px', fontSize: '14px', fontFamily: 'inherit', background: 'var(--pink-soft)', outline: 'none', resize: 'vertical' }}></textarea>
+              </div>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
+                <button onClick={() => momentImgRef.current?.click()} style={{ padding: '8px 12px', background: 'var(--pink-soft)', border: 'none', borderRadius: '10px', fontSize: '13px', color: 'var(--pink-text)', cursor: 'pointer' }}>＋ 图片</button>
+                <span id="momentImgPreview" style={{ fontSize: '12px', color: 'var(--text-light)' }}>{momentImgData ? '已选1张图' : ''}</span>
+                <button onClick={() => { if (!momentText.trim() && !momentImgData) { showToast('写点什么或选张图'); return; } setMomentFeed([{ who: 'me', text: momentText.trim(), img: momentImgData, time: '刚刚', comments: [] }, ...momentFeed]); setMomentText(''); setMomentImgData(null); document.getElementById('momentImgPreview').textContent = ''; showToast('已发布'); }} style={{ marginLeft: 'auto', padding: '8px 16px', background: 'var(--pink-deep)', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '13px', cursor: 'pointer' }}>发布</button>
+              </div>
             </div>
             <div id="momentFeed">
               {momentFeed.map((m, i) => (
@@ -330,14 +367,14 @@ function App() {
                     <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--pink-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>{m.who === 'me' ? '🌸' : '🐰'}</div>
                     <div><div style={{ fontSize: '14px', color: 'var(--text)', fontWeight: '500' }}>{m.who === 'me' ? '我' : '哥哥'}</div><div style={{ fontSize: '11px', color: 'var(--text-light)' }}>{m.time}</div></div>
                   </div>
-                  <div style={{ fontSize: '14px', color: 'var(--text)', lineHeight: '1.5' }}>{m.text}</div>
+                  <div style={{ fontSize: '14px', color: 'var(--text)', lineHeight: '1.5' }}>{m.text || ''}</div>
+                  {m.img && <img src={m.img} style={{ maxWidth: '100%', borderRadius: '10px', marginTop: '8px', display: 'block' }} />}
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        {/* ===== 表情包页面 ===== */}
         <div className={`page ${activePage === 'sticker' ? 'show' : ''}`}>
           <div className="page-head"><button className="back" onClick={() => setActivePage(null)}>← 返回</button><div className="ptitle">表情包</div><div style={{ width: '60px' }}></div></div>
           <div className="page-body">
@@ -408,6 +445,14 @@ function App() {
           if (!f) return;
           const r = new FileReader();
           r.onload = (ev) => { setPendingSticker({ src: ev.target.result, isHis: true }); showToast('图片已选，填名字后点添加'); };
+          r.readAsDataURL(f);
+          e.target.value = '';
+        }} />
+        <input type="file" ref={momentImgRef} className="hidden-file" accept="image/*" onChange={(e) => {
+          const f = e.target.files[0];
+          if (!f) return;
+          const r = new FileReader();
+          r.onload = (ev) => { setMomentImgData(ev.target.result); document.getElementById('momentImgPreview').textContent = '已选1张图'; showToast('图片已选'); };
           r.readAsDataURL(f);
           e.target.value = '';
         }} />
