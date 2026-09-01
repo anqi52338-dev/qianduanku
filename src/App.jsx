@@ -30,8 +30,6 @@ function App() {
   const [toastVisible, setToastVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [pendingImage, setPendingImage] = useState(null);
-  const [compressThreshold, setCompressThreshold] = useState(15000);
-  const [compressKeepRounds, setCompressKeepRounds] = useState(6);
   const chatAreaRef = useRef(null);
   const fileInputRef = useRef(null);
   const avatarMeRef = useRef(null);
@@ -122,7 +120,8 @@ function App() {
       } else replies = ['抱歉，暂时没有回复'];
 
       let currentMsgs = [...newMsgs];
-      for (let i = 0; i < replies.length && i < 4; i++) {
+      // ===== 最多 6 条回复 =====
+      for (let i = 0; i < replies.length && i < 6; i++) {
         const replyText = replies[i];
         if (!replyText) continue;
         const replyMsg = { id: Date.now() + '_reply_' + i, role: 'other', text: replyText, time: nowTime() };
@@ -131,8 +130,25 @@ function App() {
         finalSessions[curSession] = { ...finalSessions[curSession], msgs: currentMsgs };
         setSessions(finalSessions);
         setTimeout(renderChat, 0);
-        if (i < replies.length - 1) await new Promise(resolve => setTimeout(resolve, 500));
+        if (i < replies.length - 1 && i < 5) await new Promise(resolve => setTimeout(resolve, 500));
       }
+
+      // ===== 自动发送表情包（后端返回的 sticker） =====
+      if (data.sticker) {
+        const stickerMsg = {
+          id: Date.now() + '_sticker_auto',
+          role: 'other',
+          img: data.sticker.src,
+          text: `（${data.sticker.name || '表情'}）`,
+          time: nowTime()
+        };
+        const stickerSessions = [...newSessions];
+        const updatedMsgs = [...currentMsgs, stickerMsg];
+        stickerSessions[curSession] = { ...stickerSessions[curSession], msgs: updatedMsgs };
+        setSessions(stickerSessions);
+        setTimeout(renderChat, 0);
+      }
+
       setIsLoading(false);
       if (sessions[curSession]?.id) loadMemories(sessions[curSession].id);
     } catch (error) {
@@ -216,7 +232,6 @@ function App() {
       if (data.success) {
         showToast('记忆压缩成功！');
         loadMemories(sessionId);
-        // 重新加载聊天历史
         setSessions(prev => {
           const updated = [...prev];
           updated[curSession] = { ...updated[curSession], msgs: [] };
@@ -255,14 +270,6 @@ function App() {
       setTimeout(renderMemories, 100);
     }
   }, [activePage, memories]);
-
-  // ===== 加载压缩参数 =====
-  const loadCompressSettings = async () => {
-    try {
-      const res = await fetch('https://homehomeanan.icu/settings');
-      // 简化：从 settings 表读取
-    } catch (e) { console.error(e); }
-  };
 
   // ===== 设置 =====
   const testConnection = async () => {
@@ -353,6 +360,51 @@ function App() {
     if (emotionInput) emotionInput.value = '';
     showToast('表情已添加！');
   };
+
+  // ===== 朋友圈发布（带 API Key 传给后端） =====
+  const postMoment = async () => {
+    if (!momentText.trim() && !momentImgData) { showToast('写点什么或选张图'); return; }
+    const apiKey = localStorage.getItem('apiKey') || '';
+    const apiBaseUrl = localStorage.getItem('apiBaseUrl') || 'https://api.deepseek.com/v1';
+    const model = localStorage.getItem('model') || 'deepseek-chat';
+
+    try {
+      const res = await fetch('https://homehomeanan.icu/moments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: momentText.trim(),
+          image: momentImgData || null,
+          apiKey,
+          apiBaseUrl,
+          model
+        })
+      });
+      const data = await res.json();
+      if (data.id) {
+        setMomentText('');
+        setMomentImgData(null);
+        document.getElementById('momentImgPreview').textContent = '';
+        showToast('已发布');
+        loadMoments();
+      }
+    } catch (e) {
+      showToast('发布失败');
+    }
+  };
+
+  // ===== 加载朋友圈 =====
+  const loadMoments = async () => {
+    try {
+      const res = await fetch('https://homehomeanan.icu/moments');
+      const data = await res.json();
+      setMomentFeed(data);
+    } catch (e) { console.error(e); }
+  };
+
+  useEffect(() => {
+    loadMoments();
+  }, []);
 
   return (
     <div className="phone">
@@ -564,18 +616,25 @@ function App() {
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
                 <button onClick={() => momentImgRef.current?.click()} style={{ padding: '8px 12px', background: 'var(--pink-soft)', border: 'none', borderRadius: '10px', fontSize: '13px', color: 'var(--pink-text)', cursor: 'pointer' }}>＋ 图片</button>
                 <span id="momentImgPreview" style={{ fontSize: '12px', color: 'var(--text-light)' }}>{momentImgData ? '已选1张图' : ''}</span>
-                <button onClick={() => { if (!momentText.trim() && !momentImgData) { showToast('写点什么或选张图'); return; } setMomentFeed([{ who: 'me', text: momentText.trim(), img: momentImgData, time: '刚刚', comments: [] }, ...momentFeed]); setMomentText(''); setMomentImgData(null); document.getElementById('momentImgPreview').textContent = ''; showToast('已发布'); }} style={{ marginLeft: 'auto', padding: '8px 16px', background: 'var(--pink-deep)', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '13px', cursor: 'pointer' }}>发布</button>
+                <button onClick={postMoment} style={{ marginLeft: 'auto', padding: '8px 16px', background: 'var(--pink-deep)', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '13px', cursor: 'pointer' }}>发布</button>
               </div>
             </div>
             <div id="momentFeed">
               {momentFeed.map((m, i) => (
                 <div key={i} className="card">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--pink-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>{m.who === 'me' ? '🌸' : '🐰'}</div>
-                    <div><div style={{ fontSize: '14px', color: 'var(--text)', fontWeight: '500' }}>{m.who === 'me' ? '我' : '哥哥'}</div><div style={{ fontSize: '11px', color: 'var(--text-light)' }}>{m.time}</div></div>
+                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--pink-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>{m.sender_type === 'user' ? '🌸' : '🤖'}</div>
+                    <div><div style={{ fontSize: '14px', fontWeight: '500' }}>{m.sender_type === 'user' ? '我' : '哥哥'}</div><div style={{ fontSize: '11px', color: 'var(--text-light)' }}>{new Date(m.created_at).toLocaleString()}</div></div>
                   </div>
-                  <div style={{ fontSize: '14px', color: 'var(--text)', lineHeight: '1.5' }}>{m.text || ''}</div>
-                  {m.img && <img src={m.img} style={{ maxWidth: '100%', borderRadius: '10px', marginTop: '8px', display: 'block' }} />}
+                  <div style={{ fontSize: '14px', lineHeight: '1.5' }}>{m.content || ''}</div>
+                  {m.image && <img src={m.image} style={{ maxWidth: '100%', borderRadius: '10px', marginTop: '8px' }} />}
+                  <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--border)' }}>
+                    {(m.moment_comments || []).map((c, ci) => (
+                      <div key={ci} style={{ fontSize: '12px', color: 'var(--text-light)' }}>
+                        {c.sender_type === 'user' ? '我' : '哥哥'}：{c.content}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
