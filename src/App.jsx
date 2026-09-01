@@ -1,6 +1,5 @@
 import './App.css';
 import React, { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react';
-import 'react-lazy-load-image-component/src/effects/blur.css';
 
 // ===== 懒加载页面 =====
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
@@ -14,9 +13,7 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [curSession, setCurSession] = useState(0);
   const [inputText, setInputText] = useState('');
-  const [sessions, setSessions] = useState([
-    { id: Date.now(), name: '日常碎碎念', msgs: [] }
-  ]);
+  const [sessions, setSessions] = useState([]);
   const [myAvatar, setMyAvatar] = useState(null);
   const [hisAvatar, setHisAvatar] = useState(null);
   const [stickers, setStickers] = useState([]);
@@ -50,6 +47,51 @@ function App() {
     setToastMsg(msg);
     setToastVisible(true);
     setTimeout(() => setToastVisible(false), 1600);
+  }, []);
+
+  // ===== 加载所有会话和消息 =====
+  const loadSessions = useCallback(async () => {
+    try {
+      const res = await fetch('https://homehomeanan.icu/sessions');
+      const data = await res.json();
+      if (data && data.length > 0) {
+        const loadedSessions = await Promise.all(data.map(async (s) => {
+          const msgsRes = await fetch(`https://homehomeanan.icu/messages/${s.id}`);
+          const msgsData = await msgsRes.json();
+          return {
+            id: s.id,
+            name: s.name,
+            msgs: msgsData.map(m => ({
+              id: m.id,
+              role: m.role === 'user' ? 'me' : 'other',
+              text: m.content,
+              time: new Date(m.created_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+            }))
+          };
+        }));
+        setSessions(loadedSessions);
+        setCurSession(0);
+      } else {
+        // 没有会话时创建默认
+        setSessions([{ id: Date.now(), name: '日常碎碎念', msgs: [] }]);
+      }
+    } catch (e) {
+      console.error('加载会话失败:', e);
+      setSessions([{ id: Date.now(), name: '日常碎碎念', msgs: [] }]);
+    }
+  }, []);
+
+  // ===== 加载自定义表情包 =====
+  const loadStickers = useCallback(async () => {
+    try {
+      const res = await fetch('https://homehomeanan.icu/stickers');
+      const data = await res.json();
+      if (data && data.length > 0) {
+        setStickers(data);
+      }
+    } catch (e) {
+      console.error('加载表情包失败:', e);
+    }
   }, []);
 
   // ===== 防抖发送 =====
@@ -94,6 +136,13 @@ function App() {
     renderChat();
   }, [curSession, sessions, renderChat]);
 
+  // ===== 页面加载时加载数据 =====
+  useEffect(() => {
+    loadSessions();
+    loadStickers();
+    loadMoments();
+  }, [loadSessions, loadStickers, loadMoments]);
+
   const loadMemories = useCallback(async (sessionId) => {
     if (!sessionId) return;
     try {
@@ -120,11 +169,7 @@ function App() {
       if (data.success) {
         showToast('记忆压缩成功！');
         loadMemories(sessionId);
-        setSessions(prev => {
-          const updated = [...prev];
-          updated[curSession] = { ...updated[curSession], msgs: [] };
-          return updated;
-        });
+        loadSessions();
         setTimeout(() => window.location.reload(), 1000);
       } else {
         showToast(data.message || '压缩失败');
@@ -132,7 +177,7 @@ function App() {
     } catch (e) {
       showToast('压缩失败: ' + e.message);
     }
-  }, [curSession, sessions, loadMemories, showToast]);
+  }, [curSession, sessions, loadMemories, loadSessions, showToast]);
 
   const loadMoments = useCallback(async () => {
     try {
@@ -255,12 +300,13 @@ function App() {
 
       setIsLoading(false);
       if (sessions[curSession]?.id) loadMemories(sessions[curSession].id);
+      loadSessions(); // 刷新会话列表
     } catch (error) {
       console.error('发送失败:', error);
       showToast('发送失败，请检查网络');
       setIsLoading(false);
     }
-  }, [inputText, pendingImage, isLoading, curSession, sessions, nowTime, renderChat, showToast, loadMemories]);
+  }, [inputText, pendingImage, isLoading, curSession, sessions, nowTime, renderChat, showToast, loadMemories, loadSessions]);
 
   const sendSticker = useCallback((src, name) => {
     const newMsgs = [...sessions[curSession].msgs, { id: Date.now() + '_sticker', role: 'me', img: src, text: name ? `（${name}）` : '', time: nowTime() }];
@@ -272,9 +318,30 @@ function App() {
     showToast('表情已发送');
   }, [curSession, sessions, renderChat, showToast, nowTime]);
 
-  useEffect(() => {
-    loadMoments();
-  }, [loadMoments]);
+  // ===== 自定义表情包：添加到 emoji 面板 =====
+  const renderEmojiPanel = () => {
+    if (!emojiOpen) return null;
+    const defaultEmojis = ['😊','🥰','😘','🥹','🥺','😌','😏','😴','🐰','🌸','💕','✨','🌙','☕','🍓','🎀','💗'];
+    return (
+      <div className={`emoji-panel show`}>
+        {defaultEmojis.map(e => (
+          <span key={e} onClick={() => { setInputText(prev => prev + e); document.getElementById('input')?.focus(); }}>{e}</span>
+        ))}
+        {stickers.map((s, i) => (
+          <img
+            key={i}
+            src={s.src}
+            onClick={() => {
+              sendSticker(s.src, s.name);
+              setEmojiOpen(false);
+            }}
+            style={{ width: '100%', aspectRatio: '1', objectFit: 'contain', cursor: 'pointer', borderRadius: '8px' }}
+            alt={s.name}
+          />
+        ))}
+      </div>
+    );
+  };
 
   const renderPage = (page) => {
     const props = {
@@ -315,10 +382,24 @@ function App() {
         {/* 侧边栏 */}
         <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
           <div className="side-head"><h3>菜单</h3><button className="side-close" onClick={() => setSidebarOpen(false)}>×</button></div>
-          <button className="new-chat-btn" onClick={() => { setSessions([{ id: Date.now(), name: '新对话', msgs: [] }, ...sessions]); setCurSession(0); setSidebarOpen(false); showToast('已新建'); }}>＋ 新建对话</button>
+          <button className="new-chat-btn" onClick={async () => {
+            const res = await fetch('https://homehomeanan.icu/sessions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: '新对话' })
+            });
+            const data = await res.json();
+            if (data.id) {
+              setSessions([{ id: data.id, name: '新对话', msgs: [] }, ...sessions]);
+              setCurSession(0);
+              setSidebarOpen(false);
+              showToast('已新建');
+              loadSessions();
+            }
+          }}>＋ 新建对话</button>
           <div className="session-list">
             {sessions.map((s, i) => (
-              <div key={s.id || i} className={`session-item ${i === curSession ? 'active' : ''}`} onClick={() => { setCurSession(i); setSidebarOpen(false); }}>
+              <div key={s.id || i} className={`session-item ${i === curSession ? 'active' : ''}`} onClick={() => { setCurSession(i); setSidebarOpen(false); if (s.id) loadMemories(s.id); }}>
                 💬 {s.name}
               </div>
             ))}
@@ -341,11 +422,8 @@ function App() {
           </div>
         )}
 
-        <div className={`emoji-panel ${emojiOpen ? 'show' : ''}`}>
-          {['😊','🥰','😘','🥹','🥺','😌','😏','😴','🐰','🌸','💕','✨','🌙','☕','🍓','🎀','💗'].map(e => (
-            <span key={e} onClick={() => { setInputText(prev => prev + e); document.getElementById('input')?.focus(); }}>{e}</span>
-          ))}
-        </div>
+        {/* Emoji 面板（含自定义表情包） */}
+        {renderEmojiPanel()}
 
         <div className="input-area">
           <div className="input-row">
@@ -367,9 +445,6 @@ function App() {
             <button className="tool-btn" onClick={() => setLinkModalOpen(true)}>🔗</button>
             <button className="tool-btn" onClick={() => setEmojiOpen(!emojiOpen)}>😊</button>
             <button className="tool-btn" onClick={() => setActivePage('sticker')}>📎</button>
-            <div className="model-chip" id="modelChip" onClick={() => setActivePage('settings')}>
-              {localStorage.getItem('model') || 'deepseek-chat'}
-            </div>
           </div>
         </div>
 
