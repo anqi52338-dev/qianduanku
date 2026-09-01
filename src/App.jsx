@@ -93,7 +93,7 @@ function App() {
     const apiBaseUrl = localStorage.getItem('apiBaseUrl') || 'https://api.deepseek.com/v1';
 
     try {
-      const response = await fetch('http://43.155.141.249:3000/chat', {
+      const response = await fetch('https://homehomeanan.icu/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -191,7 +191,7 @@ function App() {
     resultEl.innerHTML = '⏳ 测试中...';
     resultEl.style.color = '#f39c12';
     try {
-      const res = await fetch('http://43.155.141.249:3000/test-model', {
+      const res = await fetch('https://homehomeanan.icu/test-model', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ baseUrl, apiKey, model })
@@ -211,7 +211,7 @@ function App() {
     resultEl.innerHTML = '⏳ 拉取中...';
     resultEl.style.color = '#f39c12';
     try {
-      const res = await fetch('http://43.155.141.249:3000/fetch-models', {
+      const res = await fetch('https://homehomeanan.icu/fetch-models', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ baseUrl, apiKey })
