@@ -29,7 +29,6 @@ function App() {
   const [stickerTab, setStickerTab] = useState(0);
   const [toastMsg, setToastMsg] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState('');
   const chatAreaRef = useRef(null);
   const fileInputRef = useRef(null);
   const avatarMeRef = useRef(null);
@@ -104,6 +103,43 @@ function App() {
       }
     } catch (err) {
       resultEl.innerHTML = '❌ 连接失败：' + err.message;
+      resultEl.style.color = '#e74c3c';
+    }
+  };
+
+  const fetchModels = async () => {
+    const baseUrl = document.getElementById('apiBaseUrl').value.trim();
+    const apiKey = document.getElementById('apiKeyInput').value.trim();
+    const resultEl = document.getElementById('modelListResult');
+
+    if (!baseUrl || !apiKey) {
+      resultEl.innerHTML = '⚠️ 请先填 BaseURL 和 API Key';
+      resultEl.style.color = '#e74c3c';
+      return;
+    }
+
+    resultEl.innerHTML = '⏳ 正在拉取模型列表...';
+    resultEl.style.color = '#f39c12';
+
+    try {
+      const response = await fetch('https://homehomeanan.icu/fetch-models', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ baseUrl, apiKey })
+      });
+      const data = await response.json();
+      if (data.success && data.models.length > 0) {
+        const modelInput = document.getElementById('modelInput');
+        modelInput.placeholder = data.models.join('、');
+        resultEl.innerHTML = `✅ 找到 ${data.models.length} 个模型：${data.models.join('、')}`;
+        resultEl.style.color = '#27ae60';
+        modelInput.value = data.models[0];
+      } else {
+        resultEl.innerHTML = '❌ 未获取到模型列表：' + (data.error || '未知错误');
+        resultEl.style.color = '#e74c3c';
+      }
+    } catch (err) {
+      resultEl.innerHTML = '❌ 请求失败：' + err.message;
       resultEl.style.color = '#e74c3c';
     }
   };
@@ -310,7 +346,13 @@ function App() {
               <input type="password" id="apiKeyInput" placeholder="sk-..." defaultValue={localStorage.getItem('apiKey') || ''} />
 
               <label>模型名称</label>
-              <input type="text" id="modelInput" placeholder="例如：gpt-4o / claude-3-5-sonnet" defaultValue={localStorage.getItem('model') || 'deepseek-chat'} />
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <input type="text" id="modelInput" placeholder="点击拉取模型列表" defaultValue={localStorage.getItem('model') || ''} style={{ flex: 1, border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 12px', fontSize: '14px', fontFamily: 'inherit', background: 'var(--pink-soft)', outline: 'none' }} />
+                <button onClick={fetchModels} style={{ padding: '10px 16px', background: 'var(--pink-soft)', border: '1px solid var(--border)', borderRadius: '10px', cursor: 'pointer', fontSize: '13px', color: 'var(--pink-text)', whiteSpace: 'nowrap' }}>
+                  🔄 拉取列表
+                </button>
+              </div>
+              <div id="modelListResult" style={{ marginTop: '6px', fontSize: '12px', color: 'var(--text-light)' }}></div>
 
               <div id="connectionResult" style={{ marginTop: '8px', fontSize: '13px', color: 'var(--text-light)' }}></div>
 
