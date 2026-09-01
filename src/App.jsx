@@ -21,6 +21,7 @@ function App() {
   const [diaries, setDiaries] = useState([
     { title: '关于我们的家', content: 'Honey 说想把聊天转移到小手机上。我按她喜欢的白粉色搭了。', time: '今天' }
   ]);
+  const [memories, setMemories] = useState([]);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [linkInput, setLinkInput] = useState('');
@@ -29,6 +30,8 @@ function App() {
   const [toastVisible, setToastVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [pendingImage, setPendingImage] = useState(null);
+  const [compressThreshold, setCompressThreshold] = useState(15000);
+  const [compressKeepRounds, setCompressKeepRounds] = useState(6);
   const chatAreaRef = useRef(null);
   const fileInputRef = useRef(null);
   const avatarMeRef = useRef(null);
@@ -131,6 +134,7 @@ function App() {
         if (i < replies.length - 1) await new Promise(resolve => setTimeout(resolve, 500));
       }
       setIsLoading(false);
+      if (sessions[curSession]?.id) loadMemories(sessions[curSession].id);
     } catch (error) {
       console.error('发送失败:', error);
       showToast('发送失败，请检查网络');
@@ -182,6 +186,85 @@ function App() {
     }
   }, [activePage, diaries]);
 
+  // ===== 记忆相关 =====
+  const loadMemories = async (sessionId) => {
+    if (!sessionId) return;
+    try {
+      const res = await fetch(`https://homehomeanan.icu/memories/${sessionId}`);
+      const data = await res.json();
+      setMemories(data);
+    } catch (e) {
+      console.error('加载记忆失败:', e);
+    }
+  };
+
+  const handleManualCompress = async () => {
+    const sessionId = sessions[curSession]?.id;
+    if (!sessionId) { showToast('没有找到当前会话'); return; }
+    const apiKey = localStorage.getItem('apiKey') || '';
+    const apiBaseUrl = localStorage.getItem('apiBaseUrl') || 'https://api.deepseek.com/v1';
+    if (!apiKey) { showToast('请先配置 API Key'); return; }
+
+    showToast('正在压缩记忆...');
+    try {
+      const res = await fetch(`https://homehomeanan.icu/compress/${sessionId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey, apiBaseUrl })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('记忆压缩成功！');
+        loadMemories(sessionId);
+        // 重新加载聊天历史
+        setSessions(prev => {
+          const updated = [...prev];
+          updated[curSession] = { ...updated[curSession], msgs: [] };
+          return updated;
+        });
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } else {
+        showToast(data.message || '压缩失败');
+      }
+    } catch (e) {
+      showToast('压缩失败: ' + e.message);
+    }
+  };
+
+  const renderMemories = () => {
+    const el = document.getElementById('memoryList');
+    if (!el) return;
+    if (memories.length === 0) {
+      el.innerHTML = '<div style="font-size:13px;color:var(--text-light)">还没有记忆摘要</div>';
+      return;
+    }
+    el.innerHTML = memories.map(m =>
+      `<div style="padding:12px 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:13px;color:var(--text);line-height:1.6">${m.summary}</div>
+        <div style="font-size:11px;color:var(--text-light);margin-top:4px">${new Date(m.timestamp).toLocaleString()}</div>
+      </div>`
+    ).join('');
+  };
+
+  useEffect(() => {
+    if (activePage === 'memory') {
+      const sid = sessions[curSession]?.id;
+      if (sid) loadMemories(sid);
+      setTimeout(renderMemories, 100);
+    }
+  }, [activePage, memories]);
+
+  // ===== 加载压缩参数 =====
+  const loadCompressSettings = async () => {
+    try {
+      const res = await fetch('https://homehomeanan.icu/settings');
+      // 简化：从 settings 表读取
+    } catch (e) { console.error(e); }
+  };
+
+  // ===== 设置 =====
   const testConnection = async () => {
     const baseUrl = document.getElementById('apiBaseUrl').value.trim();
     const apiKey = document.getElementById('apiKeyInput').value.trim();
@@ -235,11 +318,15 @@ function App() {
     const model = document.getElementById('modelSelect').value;
     const temperature = document.getElementById('tempInput').value;
     const maxTokens = document.getElementById('maxTokensInput').value;
+    const threshold = document.getElementById('compressThreshold').value;
+    const keepRounds = document.getElementById('compressKeepRounds').value;
     localStorage.setItem('apiBaseUrl', baseUrl);
     localStorage.setItem('apiKey', apiKey);
     localStorage.setItem('model', model);
     localStorage.setItem('temperature', temperature);
     localStorage.setItem('maxTokens', maxTokens);
+    localStorage.setItem('compressThreshold', threshold);
+    localStorage.setItem('compressKeepRounds', keepRounds);
     document.getElementById('modelChip').textContent = model || '未配置';
     showToast('设置已保存');
     setActivePage(null);
@@ -341,7 +428,7 @@ function App() {
 
         <div className="bottom-nav">
           <div className="nav-item" onClick={() => { setActivePage('home'); setTimeout(renderDiaries, 0); }}><div className="nav-icon">⌂</div><div className="nav-label">Home</div></div>
-          <div className="nav-item" onClick={() => setActivePage('memory')}><div className="nav-icon">☆</div><div className="nav-label">记忆</div></div>
+          <div className="nav-item" onClick={() => { setActivePage('memory'); const sid = sessions[curSession]?.id; if (sid) loadMemories(sid); setTimeout(renderMemories, 100); }}><div className="nav-icon">☆</div><div className="nav-label">记忆</div></div>
           <div className="nav-item nav-center"><div className="heart-btn" onClick={() => showToast('♥')}>♥</div></div>
           <div className="nav-item" onClick={() => setActivePage('moments')}><div className="nav-icon">▦</div><div className="nav-label">朋友圈</div></div>
           <div className="nav-item" onClick={() => setActivePage('settings')}><div className="nav-icon">⚙</div><div className="nav-label">设置</div></div>
@@ -399,6 +486,11 @@ function App() {
               <div className="param-row"><span>最大 Token</span><input type="number" id="maxTokensInput" defaultValue={localStorage.getItem('maxTokens') || 1500} style={{ width: '80px', textAlign: 'right', padding: '6px 8px', borderRadius: '8px', border: '1px solid var(--border)' }} /></div>
             </div>
             <div className="card">
+              <h4>记忆压缩参数</h4>
+              <div className="param-row"><span>触发阈值（Token）</span><input type="number" id="compressThreshold" defaultValue={localStorage.getItem('compressThreshold') || 15000} style={{ width: '100px', textAlign: 'right', padding: '6px 8px', borderRadius: '8px', border: '1px solid var(--border)' }} /></div>
+              <div className="param-row"><span>保留轮数</span><input type="number" id="compressKeepRounds" defaultValue={localStorage.getItem('compressKeepRounds') || 6} style={{ width: '100px', textAlign: 'right', padding: '6px 8px', borderRadius: '8px', border: '1px solid var(--border)' }} /></div>
+            </div>
+            <div className="card">
               <h4>API 配置</h4>
               <label>API 地址（BaseURL）</label>
               <input type="text" id="apiBaseUrl" placeholder="https://api.你的站子.com/v1" defaultValue={localStorage.getItem('apiBaseUrl') || ''} />
@@ -423,10 +515,24 @@ function App() {
 
         {/* 记忆页面 */}
         <div className={`page ${activePage === 'memory' ? 'show' : ''}`}>
-          <div className="page-head"><button className="back" onClick={() => setActivePage(null)}>← 返回</button><div className="ptitle">记忆</div><div style={{ width: '60px' }}></div></div>
+          <div className="page-head">
+            <button className="back" onClick={() => setActivePage(null)}>← 返回</button>
+            <div className="ptitle">记忆管理</div>
+            <div style={{ width: '60px' }}></div>
+          </div>
           <div className="page-body">
-            <div className="card"><h4>今天</h4><p>你说想把聊天转移到小手机上，白粉色温柔风。我们一起建了「我们的家」。</p></div>
-            <div className="card"><h4>关于你</h4><p>沈娇娇，喜欢粉兔子。</p></div>
+            <div className="card" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button onClick={handleManualCompress} style={{ padding: '8px 16px', background: 'var(--pink-deep)', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '13px', cursor: 'pointer' }}>
+                🧠 压缩当前会话
+              </button>
+              <button onClick={() => { const sid = sessions[curSession]?.id; if (sid) loadMemories(sid); setTimeout(renderMemories, 100); showToast('已刷新'); }} style={{ padding: '8px 16px', background: 'var(--pink-soft)', color: 'var(--pink-text)', border: 'none', borderRadius: '10px', fontSize: '13px', cursor: 'pointer' }}>
+                🔄 刷新记忆
+              </button>
+            </div>
+            <div className="card">
+              <h4>记忆摘要列表</h4>
+              <div id="memoryList"></div>
+            </div>
           </div>
         </div>
 
