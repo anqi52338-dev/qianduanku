@@ -92,7 +92,7 @@ function App() {
   // ===== 加载智能体私聊消息 =====
   const loadAgentChats = async (agentId) => {
     try {
-      const res = await fetch(`https://homehomeanan.icu/agent-chats/${agentId}`);
+      const res = await fetch(`http://43.155.141.249:3000/agent-chats/${agentId}`);
       const data = await res.json();
       setAgentMessages(data);
       setCurrentAgentChat(agentId);
@@ -102,7 +102,7 @@ function App() {
   // ===== 加载群聊消息 =====
   const loadGroupMessages = async (groupId) => {
     try {
-      const res = await fetch(`https://homehomeanan.icu/group-chats/${groupId}/messages`);
+      const res = await fetch(`http://43.155.141.249:3000/group-chats/${groupId}/messages`);
       const data = await res.json();
       setGroupMessages(data);
     } catch (e) { showToast('加载失败'); }
@@ -111,7 +111,7 @@ function App() {
   // ===== 加载智能体列表 =====
   const loadAgents = async () => {
     try {
-      const res = await fetch('https://homehomeanan.icu/agents');
+      const res = await fetch('http://43.155.141.249:3000/agents');
       const data = await res.json();
       setAgents(data);
     } catch (e) { console.error(e); }
@@ -120,7 +120,7 @@ function App() {
   // ===== 加载群聊列表 =====
   const loadGroupChats = async () => {
     try {
-      const res = await fetch('https://homehomeanan.icu/group-chats');
+      const res = await fetch('http://43.155.141.249:3000/group-chats');
       const data = await res.json();
       setGroupChats(data);
     } catch (e) { console.error(e); }
@@ -129,7 +129,7 @@ function App() {
   // ===== 加载朋友圈 =====
   const loadMoments = async () => {
     try {
-      const res = await fetch('https://homehomeanan.icu/moments');
+      const res = await fetch('http://43.155.141.249:3000/moments');
       const data = await res.json();
       setMomentFeed(data);
     } catch (e) { console.error(e); }
@@ -139,7 +139,7 @@ function App() {
   const createAgent = async () => {
     if (!newAgentName.trim()) { showToast('请输入名称'); return; }
     try {
-      const res = await fetch('https://homehomeanan.icu/agents', {
+      const res = await fetch('http://43.155.141.249:3000/agents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -165,7 +165,7 @@ function App() {
     if (!newGroupName.trim()) { showToast('请输入群名'); return; }
     if (selectedAgents.length < 2) { showToast('请至少选2个智能体'); return; }
     try {
-      const res = await fetch('https://homehomeanan.icu/group-chats', {
+      const res = await fetch('http://43.155.141.249:3000/group-chats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newGroupName, agent_ids: selectedAgents })
@@ -208,7 +208,7 @@ function App() {
     const apiBaseUrl = localStorage.getItem('apiBaseUrl') || 'https://api.deepseek.com/v1';
 
     try {
-      const response = await fetch('https://homehomeanan.icu/chat', {
+      const response = await fetch('http://43.155.141.249:3000/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -277,7 +277,7 @@ function App() {
     const apiBaseUrl = localStorage.getItem('apiBaseUrl') || 'https://api.deepseek.com/v1';
 
     try {
-      const res = await fetch(`https://homehomeanan.icu/agent-chats/${currentAgentChat}`, {
+      const res = await fetch(`http://43.155.141.249:3000/agent-chats/${currentAgentChat}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -321,7 +321,7 @@ function App() {
     const mention = mentionMatch ? [mentionMatch[1]] : [];
 
     try {
-      const res = await fetch(`https://homehomeanan.icu/group-chats/${currentGroup}/messages`, {
+      const res = await fetch(`http://43.155.141.249:3000/group-chats/${currentGroup}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -384,7 +384,7 @@ function App() {
   const postMoment = async () => {
     if (!momentText.trim() && !momentImgData) { showToast('写点什么或选张图'); return; }
     try {
-      await fetch('https://homehomeanan.icu/moments', {
+      await fetch('http://43.155.141.249:3000/moments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -465,7 +465,7 @@ function App() {
     resultEl.innerHTML = '⏳ 测试中...';
     resultEl.style.color = '#f39c12';
     try {
-      const res = await fetch('https://homehomeanan.icu/test-model', {
+      const res = await fetch('http://43.155.141.249:3000/test-model', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ baseUrl, apiKey, model })
@@ -485,7 +485,7 @@ function App() {
     resultEl.innerHTML = '⏳ 拉取中...';
     resultEl.style.color = '#f39c12';
     try {
-      const res = await fetch('https://homehomeanan.icu/fetch-models', {
+      const res = await fetch('http://43.155.141.249:3000/fetch-models', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ baseUrl, apiKey })
