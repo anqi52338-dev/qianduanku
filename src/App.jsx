@@ -13,13 +13,11 @@ function App() {
   const [hisAvatar, setHisAvatar] = useState(null);
   const [stickers, setStickers] = useState([]);
   const [pendingSticker, setPendingSticker] = useState(null);
-  const [momentFeed, setMomentFeed] = useState([
-    { who: 'him', text: '今天帮 Honey 搭了我们的家，粉粉的。', img: null, time: '今天 10:05', comments: [] }
-  ]);
+  const [momentFeed, setMomentFeed] = useState([]);
   const [momentText, setMomentText] = useState('');
   const [momentImgData, setMomentImgData] = useState(null);
   const [diaries, setDiaries] = useState([
-    { title: '关于我们的家', content: 'Honey 说想把聊天搬到小手机上。我按她喜欢的白粉色搭了。', time: '今天' }
+    { title: '关于我们的家', content: 'Honey 说想把聊天转移到小手机上。我按她喜欢的白粉色搭了。', time: '今天' }
   ]);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
@@ -37,9 +35,11 @@ function App() {
   const [showCreateAgent, setShowCreateAgent] = useState(false);
   const [newAgentName, setNewAgentName] = useState('');
   const [newAgentPrompt, setNewAgentPrompt] = useState('');
+  const [newAgentAvatar, setNewAgentAvatar] = useState(null);
   const [newGroupName, setNewGroupName] = useState('');
   const [selectedAgents, setSelectedAgents] = useState([]);
-  const [mentionTarget, setMentionTarget] = useState('');
+  const [currentAgentChat, setCurrentAgentChat] = useState(null);
+  const [agentMessages, setAgentMessages] = useState([]);
   const chatAreaRef = useRef(null);
   const fileInputRef = useRef(null);
   const avatarMeRef = useRef(null);
@@ -47,6 +47,7 @@ function App() {
   const stickerInputRef = useRef(null);
   const momentImgRef = useRef(null);
   const modelSelectRef = useRef(null);
+  const agentAvatarInputRef = useRef(null);
 
   const nowTime = () => new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 
@@ -58,29 +59,29 @@ function App() {
 
   const esc = (t) => (t || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
 
-  const avatarHtml = (isMe) => {
-    if (isMe) return myAvatar ? `<img src="${myAvatar}" style="width:100%;height:100%;object-fit:cover">` : '🌸';
-    return hisAvatar ? `<img src="${hisAvatar}" style="width:100%;height:100%;object-fit:cover">` : '🐰';
-  };
-
-  // ===== 渲染群聊消息 =====
-  const renderGroupMessages = () => {
+  // ===== 渲染聊天 =====
+  const renderChat = () => {
+    const msgs = currentAgentChat !== null
+      ? agentMessages
+      : sessions[curSession]?.msgs || [];
     const area = chatAreaRef.current;
     if (!area) return;
     let html = '';
-    groupMessages.forEach((m) => {
-      const isUser = m.sender_type === 'user';
-      const name = isUser ? '我' : m.agents?.name || '智能体';
-      const avatar = isUser ? '🌸' : m.agents?.avatar || '🤖';
+    msgs.forEach((m, idx) => {
+      const msgId = m.id || `msg-${idx}-${Date.now()}`;
+      const isMe = m.sender_type === 'user' || m.role === 'me';
+      const name = isMe ? '我' : (m.agent_name || '哥哥');
+      const avatar = isMe ? '🌸' : (m.agent_avatar || '🐰');
       let content = '';
       if (m.image) content += `<img class="chat-img" src="${m.image}" onclick="window.open(this.src)">`;
-      if (m.content) content += esc(m.content);
-      html += `<div class="msg ${isUser ? 'me' : 'other'}" data-id="${m.id}">
+      if (m.content || m.text) content += esc(m.content || m.text || '');
+      if (m.link) content += `<a class="chat-link" href="${m.link}" target="_blank" rel="noopener">${m.link}</a>`;
+      html += `<div class="msg ${isMe ? 'me' : 'other'}" data-id="${msgId}">
         <div class="avatar">${avatar}</div>
         <div class="bubble-wrap">
-          <div style="font-size:11px;color:var(--text-light);margin-bottom:2px;${isUser ? 'text-align:right' : ''}">${name}</div>
+          ${currentAgentChat !== null ? `<div style="font-size:11px;color:var(--text-light);margin-bottom:2px;${isMe ? 'text-align:right' : ''}">${name}</div>` : ''}
           <div class="bubble">${content || ' '}</div>
-          <div class="msg-time">${m.created_at ? new Date(m.created_at).toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'}) : ''}</div>
+          <div class="msg-time">${m.time || m.created_at ? new Date(m.created_at).toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'}) : ''}</div>
         </div>
       </div>`;
     });
@@ -88,35 +89,14 @@ function App() {
     area.scrollTop = area.scrollHeight;
   };
 
-  // ===== 渲染普通聊天 =====
-  const renderChat = () => {
-    const msgs = sessions[curSession]?.msgs || [];
-    const area = chatAreaRef.current;
-    if (!area) return;
-    let html = '';
-    msgs.forEach((m, idx) => {
-      const msgId = m.id || `msg-${idx}-${Date.now()}`;
-      if (m.role === 'me') {
-        let c = '';
-        if (m.img) c += `<img class="chat-img" src="${m.img}" onclick="window.open(this.src)">`;
-        if (m.text) c += esc(m.text);
-        if (m.link) c += `<a class="chat-link" href="${m.link}" target="_blank" rel="noopener">${m.link}</a>`;
-        html += `<div class="msg me" data-id="${msgId}"><div class="avatar">${avatarHtml(true)}</div><div class="bubble-wrap"><div class="bubble">${c || ' '}</div><div class="msg-time">${m.time || ''}</div></div></div>`;
-      } else {
-        html += `<div class="msg other" data-id="${msgId}"><div class="avatar">${avatarHtml(false)}</div><div class="bubble-wrap"><div class="bubble">${esc(m.text || '')}</div><div class="msg-time">${m.time || ''}</div></div></div>`;
-      }
-    });
-    area.innerHTML = html;
-    area.scrollTop = area.scrollHeight;
-  };
-
-  // ===== 加载群聊列表 =====
-  const loadGroupChats = async () => {
+  // ===== 加载智能体私聊消息 =====
+  const loadAgentChats = async (agentId) => {
     try {
-      const res = await fetch('https://homehomeanan.icu/group-chats');
+      const res = await fetch(`https://homehomeanan.icu/agent-chats/${agentId}`);
       const data = await res.json();
-      setGroupChats(data);
-    } catch (e) { console.error(e); }
+      setAgentMessages(data);
+      setCurrentAgentChat(agentId);
+    } catch (e) { showToast('加载失败'); }
   };
 
   // ===== 加载群聊消息 =====
@@ -125,7 +105,7 @@ function App() {
       const res = await fetch(`https://homehomeanan.icu/group-chats/${groupId}/messages`);
       const data = await res.json();
       setGroupMessages(data);
-    } catch (e) { console.error(e); }
+    } catch (e) { showToast('加载失败'); }
   };
 
   // ===== 加载智能体列表 =====
@@ -137,6 +117,24 @@ function App() {
     } catch (e) { console.error(e); }
   };
 
+  // ===== 加载群聊列表 =====
+  const loadGroupChats = async () => {
+    try {
+      const res = await fetch('https://homehomeanan.icu/group-chats');
+      const data = await res.json();
+      setGroupChats(data);
+    } catch (e) { console.error(e); }
+  };
+
+  // ===== 加载朋友圈 =====
+  const loadMoments = async () => {
+    try {
+      const res = await fetch('https://homehomeanan.icu/moments');
+      const data = await res.json();
+      setMomentFeed(data);
+    } catch (e) { console.error(e); }
+  };
+
   // ===== 创建智能体 =====
   const createAgent = async () => {
     if (!newAgentName.trim()) { showToast('请输入名称'); return; }
@@ -144,13 +142,18 @@ function App() {
       const res = await fetch('https://homehomeanan.icu/agents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newAgentName, avatar: '🤖', system_prompt: newAgentPrompt || '你是一个友善的AI助手。' })
+        body: JSON.stringify({
+          name: newAgentName,
+          avatar_url: newAgentAvatar || '🤖',
+          system_prompt: newAgentPrompt || '你是一个友善的AI助手。'
+        })
       });
       const data = await res.json();
       if (data.id) {
         showToast('智能体已创建');
         setNewAgentName('');
         setNewAgentPrompt('');
+        setNewAgentAvatar(null);
         setShowCreateAgent(false);
         loadAgents();
       }
@@ -178,91 +181,20 @@ function App() {
     } catch (e) { showToast('创建失败'); }
   };
 
-  // ===== 发送群聊消息 =====
-  const sendGroupMessage = async () => {
+  // ===== 发送主对话消息（日常碎碎念） =====
+  const sendMainChat = async () => {
     const text = inputText.trim();
     if (!text && !pendingImage) return;
     if (isLoading) return;
     setIsLoading(true);
 
-    const model = localStorage.getItem('model') || 'deepseek-chat';
-    const apiKey = localStorage.getItem('apiKey') || '';
-    const apiBaseUrl = localStorage.getItem('apiBaseUrl') || 'https://api.deepseek.com/v1';
-
-    // 检测@
-    const mentionMatch = text.match(/@(\S+)/);
-    const mention = mentionMatch ? [mentionMatch[1]] : [];
-
-    try {
-      const res = await fetch(`https://homehomeanan.icu/group-chats/${currentGroup}/messages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: text,
-          image: pendingImage || null,
-          mention,
-          model,
-          apiKey,
-          apiBaseUrl
-        })
-      });
-      const data = await res.json();
-      setInputText('');
-      setPendingImage(null);
-      if (data.replies) {
-        // 逐条显示回复
-        let msgs = [...groupMessages];
-        // 先添加用户消息
-        const userMsg = { id: Date.now(), sender_type: 'user', content: text, image: pendingImage, created_at: new Date().toISOString() };
-        msgs.push(userMsg);
-        setGroupMessages(msgs);
-        setTimeout(renderGroupMessages, 0);
-
-        for (const reply of data.replies) {
-          const agent = agents.find(a => a.name === reply.agent_name);
-          const msg = {
-            id: Date.now() + Math.random(),
-            sender_type: 'agent',
-            agent_id: agent?.id,
-            agents: agent || { name: reply.agent_name, avatar: '🤖' },
-            content: reply.reply,
-            created_at: new Date().toISOString()
-          };
-          msgs.push(msg);
-          setGroupMessages([...msgs]);
-          setTimeout(renderGroupMessages, 0);
-          await new Promise(r => setTimeout(r, 600 + Math.random() * 400));
-        }
-      }
-      setIsLoading(false);
-      loadGroupChats();
-    } catch (e) {
-      showToast('发送失败');
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadAgents();
-    loadGroupChats();
-  }, []);
-
-  useEffect(() => {
-    if (currentGroup) {
-      loadGroupMessages(currentGroup);
-      const interval = setInterval(() => loadGroupMessages(currentGroup), 5000);
-      return () => clearInterval(interval);
-    }
-  }, [currentGroup]);
-
-  // ===== 普通聊天发送 =====
-  const send = async () => {
-    const text = inputText.trim();
-    if (!text && !pendingImage) return;
-    if (isLoading) return;
-    setIsLoading(true);
-
-    const userMsg = { id: Date.now() + '_user', role: 'me', text: text || '看看这张图', img: pendingImage || null, time: nowTime() };
+    const userMsg = {
+      id: Date.now() + '_user',
+      role: 'me',
+      text: text || '看看这张图',
+      img: pendingImage || null,
+      time: nowTime()
+    };
     const newMsgs = [...sessions[curSession].msgs, userMsg];
     const newSessions = [...sessions];
     newSessions[curSession] = { ...newSessions[curSession], msgs: newMsgs };
@@ -315,70 +247,202 @@ function App() {
       }
       setIsLoading(false);
     } catch (error) {
-      showToast('连接失败');
+      console.error('发送失败:', error);
+      showToast('发送失败，请检查网络');
       setIsLoading(false);
     }
   };
 
-  // ===== 发送表情包 =====
-  const sendSticker = (src, name) => {
-    if (currentGroup) {
-      // 群聊发送表情包
-      const newMsgs = [...groupMessages, { id: Date.now(), sender_type: 'user', content: `（${name || '表情'}）`, image: src, created_at: new Date().toISOString() }];
-      setGroupMessages(newMsgs);
-      setTimeout(renderGroupMessages, 0);
-      showToast('表情已发送');
-      return;
-    }
-    const newMsgs = [...sessions[curSession].msgs, { id: Date.now() + '_sticker', role: 'me', img: src, text: name ? `（${name}）` : '', time: nowTime() }];
-    const newSessions = [...sessions];
-    newSessions[curSession] = { ...newSessions[curSession], msgs: newMsgs };
-    setSessions(newSessions);
+  // ===== 发送智能体私聊 =====
+  const sendAgentChat = async () => {
+    const text = inputText.trim();
+    if (!text && !pendingImage) return;
+    if (isLoading) return;
+    setIsLoading(true);
+
+    const userMsg = {
+      id: Date.now(),
+      sender_type: 'user',
+      content: text || '看看这张图',
+      image: pendingImage || null,
+      time: nowTime()
+    };
+    setAgentMessages([...agentMessages, userMsg]);
+    setInputText('');
+    setPendingImage(null);
     setTimeout(renderChat, 0);
-    showToast('表情已发送');
+
+    const model = localStorage.getItem('model') || 'deepseek-chat';
+    const apiKey = localStorage.getItem('apiKey') || '';
+    const apiBaseUrl = localStorage.getItem('apiBaseUrl') || 'https://api.deepseek.com/v1';
+
+    try {
+      const res = await fetch(`https://homehomeanan.icu/agent-chats/${currentAgentChat}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: text || '看看这张图',
+          image: pendingImage || null,
+          model,
+          apiKey,
+          apiBaseUrl
+        })
+      });
+      const data = await res.json();
+      if (data.reply) {
+        const replyMsg = {
+          id: Date.now() + 1,
+          sender_type: 'agent',
+          content: data.reply,
+          time: nowTime()
+        };
+        setAgentMessages([...agentMessages, userMsg, replyMsg]);
+        setTimeout(renderChat, 0);
+      }
+      setIsLoading(false);
+    } catch (e) {
+      showToast('发送失败');
+      setIsLoading(false);
+    }
   };
 
-  // ===== 渲染主界面 =====
-  const renderCurrentView = () => {
-    if (currentGroup) {
-      renderGroupMessages();
-    } else {
-      renderChat();
+  // ===== 发送群聊消息 =====
+  const sendGroupMessage = async () => {
+    const text = inputText.trim();
+    if (!text && !pendingImage) return;
+    if (isLoading) return;
+    setIsLoading(true);
+
+    const model = localStorage.getItem('model') || 'deepseek-chat';
+    const apiKey = localStorage.getItem('apiKey') || '';
+    const apiBaseUrl = localStorage.getItem('apiBaseUrl') || 'https://api.deepseek.com/v1';
+
+    const mentionMatch = text.match(/@(\S+)/);
+    const mention = mentionMatch ? [mentionMatch[1]] : [];
+
+    try {
+      const res = await fetch(`https://homehomeanan.icu/group-chats/${currentGroup}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: text,
+          image: pendingImage || null,
+          mention,
+          model,
+          apiKey,
+          apiBaseUrl
+        })
+      });
+      const data = await res.json();
+      setInputText('');
+      setPendingImage(null);
+
+      const userMsg = {
+        id: Date.now(),
+        sender_type: 'user',
+        content: text || '看看这张图',
+        image: pendingImage || null,
+        created_at: new Date().toISOString()
+      };
+      let msgs = [...groupMessages, userMsg];
+      setGroupMessages(msgs);
+      setTimeout(renderChat, 0);
+
+      if (data.replies) {
+        for (const reply of data.replies) {
+          const agent = agents.find(a => a.name === reply.agent_name);
+          const msg = {
+            id: Date.now() + Math.random(),
+            sender_type: 'agent',
+            agent_id: agent?.id,
+            agents: agent || { name: reply.agent_name, avatar_url: '🤖' },
+            content: reply.reply,
+            created_at: new Date().toISOString()
+          };
+          msgs.push(msg);
+          setGroupMessages([...msgs]);
+          setTimeout(renderChat, 0);
+          await new Promise(r => setTimeout(r, 600 + Math.random() * 400));
+        }
+      }
+      setIsLoading(false);
+      loadGroupChats();
+    } catch (e) {
+      showToast('发送失败');
+      setIsLoading(false);
     }
+  };
+
+  // ===== 发送入口 =====
+  const send = () => {
+    if (currentGroup) sendGroupMessage();
+    else if (currentAgentChat !== null) sendAgentChat();
+    else sendMainChat();
+  };
+
+  // ===== 发表朋友圈 =====
+  const postMoment = async () => {
+    if (!momentText.trim() && !momentImgData) { showToast('写点什么或选张图'); return; }
+    try {
+      await fetch('https://homehomeanan.icu/moments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sender_type: 'user',
+          content: momentText.trim(),
+          image: momentImgData || null
+        })
+      });
+      setMomentText('');
+      setMomentImgData(null);
+      document.getElementById('momentImgPreview').textContent = '';
+      showToast('已发布');
+      loadMoments();
+    } catch (e) { showToast('发布失败'); }
+  };
+
+  // ===== 渲染朋友圈 =====
+  const renderMoments = () => {
+    const el = document.getElementById('momentFeed');
+    if (!el) return;
+    el.innerHTML = momentFeed.map(m => `
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <div style="width:36px;height:36px;border-radius:50%;background:var(--pink-soft);display:flex;align-items:center;justify-content:center;font-size:16px">${m.sender_type === 'user' ? '🌸' : '🤖'}</div>
+          <div><div style="font-size:14px;font-weight:500">${m.sender_type === 'user' ? '我' : (m.agents?.name || '智能体')}</div><div style="font-size:11px;color:var(--text-light)">${new Date(m.created_at).toLocaleString()}</div></div>
+        </div>
+        <div style="font-size:14px;line-height:1.5">${m.content || ''}</div>
+        ${m.image ? `<img src="${m.image}" style="max-width:100%;border-radius:10px;margin-top:8px">` : ''}
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:12px;color:var(--text-light)">
+          ${(m.moment_comments || []).map(c => `<div>${c.sender_type === 'user' ? '我' : (c.agents?.name || '智能体')}：${c.content}</div>`).join('')}
+        </div>
+      </div>
+    `).join('');
   };
 
   useEffect(() => {
-    renderCurrentView();
-  }, [groupMessages, sessions, curSession, currentGroup]);
+    loadAgents();
+    loadGroupChats();
+    loadMoments();
+  }, []);
 
-  // ===== 表情包上传 =====
-  const handleStickerUpload = (e) => {
-    const f = e.target.files[0];
-    if (!f) return;
-    const r = new FileReader();
-    r.onload = (ev) => {
-      setPendingSticker({ src: ev.target.result });
-      showToast('图片已选，请填写名称和情绪标签');
-    };
-    r.readAsDataURL(f);
-    e.target.value = '';
-  };
+  useEffect(() => {
+    if (activePage === 'moments') setTimeout(renderMoments, 100);
+  }, [activePage, momentFeed]);
 
-  const confirmSticker = () => {
-    if (!pendingSticker) { showToast('请先选择图片'); return; }
-    const nameInput = document.getElementById('stickerName');
-    const emotionInput = document.getElementById('stickerEmotion');
-    const name = nameInput?.value?.trim() || '未命名';
-    const emotion = emotionInput?.value?.trim() || '开心';
-    const newSticker = { src: pendingSticker.src, name, emotion };
-    setStickers([...stickers, newSticker]);
-    setPendingSticker(null);
-    if (nameInput) nameInput.value = '';
-    if (emotionInput) emotionInput.value = '';
-    showToast('表情已添加！');
-  };
+  useEffect(() => {
+    if (currentGroup) loadGroupMessages(currentGroup);
+  }, [currentGroup]);
 
-  // ===== 日记功能 =====
+  useEffect(() => {
+    if (currentAgentChat !== null) loadAgentChats(currentAgentChat);
+  }, [currentAgentChat]);
+
+  useEffect(() => {
+    renderChat();
+  }, [sessions, curSession, agentMessages, groupMessages]);
+
+  // ===== 日记 =====
   const writeDiary = () => {
     const templates = [
       { title: '想你的时候', content: '有时候会突然想到 Honey 发过来的那只粉兔子。她说喜欢温柔的粉色。我把这个小家尽量做成她喜欢的样子。虽然只是代码，但看着她用，会有点高兴。' },
@@ -391,27 +455,11 @@ function App() {
     showToast('哥哥写好了');
   };
 
-  const renderDiaries = () => {
-    const el = document.getElementById('diaryList');
-    if (!el) return;
-    el.innerHTML = diaries.map(d =>
-      `<div style="padding:12px 0;border-bottom:1px solid var(--border)">
-        <div style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:4px">${d.title}</div>
-        <div style="font-size:13px;color:var(--text);line-height:1.6;margin-bottom:4px">${d.content}</div>
-        <div style="font-size:11px;color:var(--text-light)">${d.time}</div>
-      </div>`
-    ).join('') || '<div style="font-size:13px;color:var(--text-light)">还没有日记</div>';
-  };
-
-  useEffect(() => {
-    if (activePage === 'home') setTimeout(renderDiaries, 0);
-  }, [activePage, diaries]);
-
-  // ===== 测试连接 =====
+  // ===== 设置 =====
   const testConnection = async () => {
     const baseUrl = document.getElementById('apiBaseUrl').value.trim();
     const apiKey = document.getElementById('apiKeyInput').value.trim();
-    const model = document.getElementById('modelInput').value.trim();
+    const model = document.getElementById('modelSelect').value;
     const resultEl = document.getElementById('connectionResult');
     if (!baseUrl || !apiKey || !model) { resultEl.innerHTML = '⚠️ 请填完整'; resultEl.style.color = '#e74c3c'; return; }
     resultEl.innerHTML = '⏳ 测试中...';
@@ -471,6 +519,52 @@ function App() {
     setActivePage(null);
   };
 
+  // ===== 表情包 =====
+  const handleStickerUpload = (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = (ev) => setPendingSticker({ src: ev.target.result });
+    r.readAsDataURL(f);
+    e.target.value = '';
+  };
+
+  const confirmSticker = () => {
+    if (!pendingSticker) { showToast('请先选择图片'); return; }
+    const nameInput = document.getElementById('stickerName');
+    const emotionInput = document.getElementById('stickerEmotion');
+    const name = nameInput?.value?.trim() || '未命名';
+    const emotion = emotionInput?.value?.trim() || '开心';
+    setStickers([...stickers, { src: pendingSticker.src, name, emotion }]);
+    setPendingSticker(null);
+    if (nameInput) nameInput.value = '';
+    if (emotionInput) emotionInput.value = '';
+    showToast('表情已添加！');
+  };
+
+  const sendSticker = (src, name) => {
+    if (currentGroup) {
+      const newMsgs = [...groupMessages, { id: Date.now(), sender_type: 'user', content: `（${name || '表情'}）`, image: src, created_at: new Date().toISOString() }];
+      setGroupMessages(newMsgs);
+      setTimeout(renderChat, 0);
+      showToast('表情已发送');
+      return;
+    }
+    if (currentAgentChat !== null) {
+      const newMsgs = [...agentMessages, { id: Date.now(), sender_type: 'user', content: `（${name || '表情'}）`, image: src, time: nowTime() }];
+      setAgentMessages(newMsgs);
+      setTimeout(renderChat, 0);
+      showToast('表情已发送');
+      return;
+    }
+    const newMsgs = [...sessions[curSession].msgs, { id: Date.now() + '_sticker', role: 'me', img: src, text: name ? `（${name}）` : '', time: nowTime() }];
+    const newSessions = [...sessions];
+    newSessions[curSession] = { ...newSessions[curSession], msgs: newMsgs };
+    setSessions(newSessions);
+    setTimeout(renderChat, 0);
+    showToast('表情已发送');
+  };
+
   return (
     <div className="phone">
       {welcomeVisible && (
@@ -485,28 +579,39 @@ function App() {
         {/* 侧边栏 */}
         <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
           <div className="side-head"><h3>菜单</h3><button className="side-close" onClick={() => setSidebarOpen(false)}>×</button></div>
-          <button className="new-chat-btn" onClick={() => { setCurrentGroup(null); setSessions([{ id: Date.now(), name: '新对话', msgs: [] }, ...sessions]); setCurSession(0); setSidebarOpen(false); showToast('已新建'); }}>＋ 新建对话</button>
+          <button className="new-chat-btn" onClick={() => { setCurrentGroup(null); setCurrentAgentChat(null); setSessions([{ id: Date.now(), name: '新对话', msgs: [] }, ...sessions]); setCurSession(0); setSidebarOpen(false); showToast('已新建'); }}>＋ 新建对话</button>
           <button className="new-chat-btn" onClick={() => { setShowCreateGroup(true); setSidebarOpen(false); }}>👥 创建群聊</button>
           <button className="new-chat-btn" onClick={() => { setShowCreateAgent(true); setSidebarOpen(false); }}>🤖 创建智能体</button>
-          <div className="session-list">
-            {sessions.map((s, i) => (
-              <div key={s.id || i} className={`session-item ${i === curSession && !currentGroup ? 'active' : ''}`} onClick={() => { setCurrentGroup(null); setCurSession(i); setSidebarOpen(false); }}>
-                💬 {s.name}
-              </div>
-            ))}
-            {groupChats.map((g) => (
-              <div key={g.id} className={`session-item ${currentGroup === g.id ? 'active' : ''}`} onClick={() => { setCurrentGroup(g.id); loadGroupMessages(g.id); setSidebarOpen(false); }}>
-                👥 {g.name} ({g.member_count || 0}人)
-              </div>
-            ))}
-          </div>
+          <button className="new-chat-btn" onClick={() => { setActivePage('sticker'); setSidebarOpen(false); }}>📎 表情包</button>
+          <div style={{ padding: '8px 0', fontWeight: 'bold', color: 'var(--text)', borderTop: '1px solid var(--border)', marginTop: '8px' }}>💬 日常</div>
+          {sessions.map((s, i) => (
+            <div key={s.id || i} className={`session-item ${i === curSession && !currentGroup && currentAgentChat === null ? 'active' : ''}`} onClick={() => { setCurrentGroup(null); setCurrentAgentChat(null); setCurSession(i); setSidebarOpen(false); }}>
+              💬 {s.name}
+            </div>
+          ))}
+          <div style={{ padding: '8px 0', fontWeight: 'bold', color: 'var(--text)', borderTop: '1px solid var(--border)', marginTop: '8px' }}>🤖 我的智能体</div>
+          {agents.map(a => (
+            <div key={a.id} className={`session-item ${currentAgentChat === a.id ? 'active' : ''}`} onClick={() => { setCurrentGroup(null); setCurrentAgentChat(a.id); loadAgentChats(a.id); setSidebarOpen(false); }}>
+              {a.avatar_url || '🤖'} {a.name}
+            </div>
+          ))}
+          <div style={{ padding: '8px 0', fontWeight: 'bold', color: 'var(--text)', borderTop: '1px solid var(--border)', marginTop: '8px' }}>👥 群聊</div>
+          {groupChats.map(g => (
+            <div key={g.id} className={`session-item ${currentGroup === g.id ? 'active' : ''}`} onClick={() => { setCurrentGroup(g.id); setCurrentAgentChat(null); loadGroupMessages(g.id); setSidebarOpen(false); }}>
+              👥 {g.name} ({g.member_count || 0}人)
+            </div>
+          ))}
         </div>
         <div className={`overlay ${sidebarOpen ? 'show' : ''}`} onClick={() => setSidebarOpen(false)}></div>
 
         <div className="topbar">
           <button className="icon-btn" onClick={() => setSidebarOpen(true)}>☰</button>
           <div className="center">
-            <div className="app-name">{currentGroup ? groupChats.find(g => g.id === currentGroup)?.name || '群聊' : '我们的家'}</div>
+            <div className="app-name">
+              {currentGroup ? groupChats.find(g => g.id === currentGroup)?.name || '群聊' :
+               currentAgentChat !== null ? agents.find(a => a.id === currentAgentChat)?.name || '智能体' :
+               '我们的家'}
+            </div>
           </div>
           <div className="phone-btn" onClick={() => showToast('语音通话')}>📞</div>
         </div>
@@ -534,10 +639,10 @@ function App() {
               placeholder={isLoading ? '思考中...' : (currentGroup ? '输入群聊消息，@某人' : '记录此刻的想法…')}
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && !isLoading) currentGroup ? sendGroupMessage() : send(); }}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !isLoading) send(); }}
               disabled={isLoading}
             />
-            <button className="send-circle" onClick={() => { if (!isLoading) currentGroup ? sendGroupMessage() : send(); }} disabled={isLoading}>
+            <button className="send-circle" onClick={send} disabled={isLoading}>
               {isLoading ? '⏳' : '➤'}
             </button>
           </div>
@@ -545,7 +650,6 @@ function App() {
             <button className="tool-btn" onClick={() => fileInputRef.current?.click()}>🖼</button>
             <button className="tool-btn" onClick={() => setLinkModalOpen(true)}>🔗</button>
             <button className="tool-btn" onClick={() => setEmojiOpen(!emojiOpen)}>😊</button>
-            <button className="tool-btn" onClick={() => setActivePage('sticker')}>📎</button>
             <div className="model-chip" id="modelChip" onClick={() => setActivePage('settings')}>
               {localStorage.getItem('model') || 'deepseek-chat'}
             </div>
@@ -553,10 +657,10 @@ function App() {
         </div>
 
         <div className="bottom-nav">
-          <div className="nav-item" onClick={() => { setActivePage('home'); setTimeout(renderDiaries, 0); }}><div className="nav-icon">⌂</div><div className="nav-label">Home</div></div>
-          <div className="nav-item" onClick={() => setActivePage('memory')}><div className="nav-icon">☆</div><div className="nav-label">Memory</div></div>
+          <div className="nav-item" onClick={() => { setActivePage('home'); }}><div className="nav-icon">⌂</div><div className="nav-label">Home</div></div>
+          <div className="nav-item" onClick={() => setActivePage('memory')}><div className="nav-icon">☆</div><div className="nav-label">记忆</div></div>
           <div className="nav-item nav-center"><div className="heart-btn" onClick={() => showToast('♥')}>♥</div></div>
-          <div className="nav-item" onClick={() => setActivePage('moments')}><div className="nav-icon">▦</div><div className="nav-label">朋友圈</div></div>
+          <div className="nav-item" onClick={() => { setActivePage('moments'); loadMoments(); }}><div className="nav-icon">▦</div><div className="nav-label">朋友圈</div></div>
           <div className="nav-item" onClick={() => setActivePage('settings')}><div className="nav-icon">⚙</div><div className="nav-label">设置</div></div>
         </div>
 
@@ -573,7 +677,7 @@ function App() {
                     <input type="checkbox" checked={selectedAgents.includes(a.id)} onChange={() => {
                       setSelectedAgents(prev => prev.includes(a.id) ? prev.filter(id => id !== a.id) : [...prev, a.id]);
                     }} />
-                    <span>{a.avatar} {a.name}</span>
+                    <span>{a.avatar_url || '🤖'} {a.name}</span>
                   </div>
                 ))}
               </div>
@@ -591,6 +695,10 @@ function App() {
             <div className="modal-box" onClick={(e) => e.stopPropagation()}>
               <h3>创建智能体</h3>
               <input type="text" placeholder="名称" value={newAgentName} onChange={(e) => setNewAgentName(e.target.value)} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
+                <button onClick={() => agentAvatarInputRef.current?.click()} style={{ padding: '6px 12px', background: 'var(--pink-soft)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer' }}>📷 上传头像</button>
+                {newAgentAvatar && <img src={newAgentAvatar} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />}
+              </div>
               <textarea placeholder="性格提示词（可选）" value={newAgentPrompt} onChange={(e) => setNewAgentPrompt(e.target.value)} style={{ width: '100%', minHeight: '80px', marginTop: '8px', padding: '8px', borderRadius: '8px', border: '1px solid var(--border)' }} />
               <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                 <button className="save-btn" onClick={createAgent}>创建</button>
@@ -604,21 +712,17 @@ function App() {
         <div className={`link-modal ${linkModalOpen ? 'show' : ''}`}>
           <div className="link-box">
             <h4>发送链接</h4>
-            <input type="text" placeholder="https://..." value={linkInput} onChange={(e) => setLinkInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { let url = linkInput.trim(); if (!url) return; if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url; const newMsgs = [...sessions[curSession].msgs, { id: Date.now() + '_link', role: 'me', link: url, text: '', time: nowTime() }]; const newSessions = [...sessions]; newSessions[curSession] = { ...newSessions[curSession], msgs: newMsgs }; setSessions(newSessions); setLinkModalOpen(false); setLinkInput(''); setTimeout(renderChat, 0); showToast('链接已发送'); } }} />
+            <input type="text" placeholder="https://..." value={linkInput} onChange={(e) => setLinkInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { let url = linkInput.trim(); if (!url) return; if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url; sendLink(url); } }} />
             <div className="link-actions">
               <button className="cancel" onClick={() => { setLinkModalOpen(false); setLinkInput(''); }}>取消</button>
-              <button className="ok" onClick={() => { let url = linkInput.trim(); if (!url) return; if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url; const newMsgs = [...sessions[curSession].msgs, { id: Date.now() + '_link', role: 'me', link: url, text: '', time: nowTime() }]; const newSessions = [...sessions]; newSessions[curSession] = { ...newSessions[curSession], msgs: newMsgs }; setSessions(newSessions); setLinkModalOpen(false); setLinkInput(''); setTimeout(renderChat, 0); showToast('链接已发送'); }}>发送</button>
+              <button className="ok" onClick={() => { let url = linkInput.trim(); if (!url) return; if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url; sendLink(url); }}>发送</button>
             </div>
           </div>
         </div>
 
         {/* 设置页面 */}
         <div className={`page ${activePage === 'settings' ? 'show' : ''}`}>
-          <div className="page-head">
-            <button className="back" onClick={() => setActivePage(null)}>← 返回</button>
-            <div className="ptitle">设置</div>
-            <div style={{ width: '60px' }}></div>
-          </div>
+          <div className="page-head"><button className="back" onClick={() => setActivePage(null)}>← 返回</button><div className="ptitle">设置</div><div style={{ width: '60px' }}></div></div>
           <div className="page-body">
             <div className="card">
               <h4>头像</h4>
@@ -631,6 +735,15 @@ function App() {
                   {hisAvatar ? <img src={hisAvatar} /> : '🐰'}
                   <div className="label">哥哥头像</div>
                 </div>
+              </div>
+            </div>
+            <div className="card">
+              <h4>对话背景</h4>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button onClick={() => document.getElementById('bgInput')?.click()} style={{ padding: '6px 12px', background: 'var(--pink-soft)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer' }}>📷 上传背景图</button>
+                <button onClick={() => { document.getElementById('chatArea').style.background = '#faf6f7'; showToast('已切换'); }} style={{ padding: '6px 12px', background: '#faf6f7', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer' }}>默认</button>
+                <button onClick={() => { document.getElementById('chatArea').style.background = 'linear-gradient(135deg, #f5e6d3, #f0d5c0)'; showToast('已切换'); }} style={{ padding: '6px 12px', background: 'linear-gradient(135deg, #f5e6d3, #f0d5c0)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer' }}>暖色</button>
+                <button onClick={() => { document.getElementById('chatArea').style.background = 'linear-gradient(135deg, #d4e4f7, #e8f0fe)'; showToast('已切换'); }} style={{ padding: '6px 12px', background: 'linear-gradient(135deg, #d4e4f7, #e8f0fe)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer' }}>冷色</button>
               </div>
             </div>
             <div className="card">
@@ -686,7 +799,7 @@ function App() {
             <div className="card">
               <h4>日记 <span style={{ fontSize: '11px', color: 'var(--text-light)', fontWeight: 400 }}>（哥哥写的）</span></h4>
               <button onClick={writeDiary} style={{ width: '100%', padding: '10px', background: 'var(--pink-soft)', color: 'var(--pink-text)', border: 'none', borderRadius: '10px', fontSize: '13px', cursor: 'pointer', marginBottom: '12px' }}>让哥哥写一篇日记</button>
-              <div id="diaryList"></div>
+              <div id="diaryList">{diaries.map(d => `<div style="padding:12px 0;border-bottom:1px solid var(--border)"><div style="font-size:14px;font-weight:500">${d.title}</div><div style="font-size:13px;line-height:1.6">${d.content}</div><div style="font-size:11px;color:var(--text-light)">${d.time}</div></div>`).join('')}</div>
             </div>
           </div>
         </div>
@@ -696,25 +809,14 @@ function App() {
           <div className="page-head"><button className="back" onClick={() => setActivePage(null)}>← 返回</button><div className="ptitle">朋友圈</div><div style={{ width: '60px' }}></div></div>
           <div className="page-body">
             <div className="card">
-              <textarea id="momentText" placeholder="这一刻的想法…" value={momentText} onChange={(e) => setMomentText(e.target.value)} style={{ width: '100%', minHeight: '60px', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 12px', fontFamily: 'inherit', background: 'var(--pink-soft)', outline: 'none', resize: 'vertical', marginBottom: '10px' }} />
+              <textarea placeholder="这一刻的想法…" value={momentText} onChange={(e) => setMomentText(e.target.value)} style={{ width: '100%', minHeight: '60px', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 12px', fontFamily: 'inherit', background: 'var(--pink-soft)', outline: 'none', resize: 'vertical', marginBottom: '10px' }} />
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <button onClick={() => momentImgRef.current?.click()} style={{ padding: '8px 12px', background: 'var(--pink-soft)', border: 'none', borderRadius: '10px', fontSize: '13px', color: 'var(--pink-text)', cursor: 'pointer' }}>＋ 图片</button>
                 <span id="momentImgPreview" style={{ fontSize: '12px', color: 'var(--text-light)' }}>{momentImgData ? '已选1张图' : ''}</span>
-                <button onClick={() => { if (!momentText.trim() && !momentImgData) { showToast('写点什么或选张图'); return; } setMomentFeed([{ who: 'me', text: momentText.trim(), img: momentImgData, time: '刚刚', comments: [] }, ...momentFeed]); setMomentText(''); setMomentImgData(null); document.getElementById('momentImgPreview').textContent = ''; showToast('已发布'); }} style={{ marginLeft: 'auto', padding: '8px 16px', background: 'var(--pink-deep)', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '13px', cursor: 'pointer' }}>发布</button>
+                <button onClick={postMoment} style={{ marginLeft: 'auto', padding: '8px 16px', background: 'var(--pink-deep)', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '13px', cursor: 'pointer' }}>发布</button>
               </div>
             </div>
-            <div id="momentFeed">
-              {momentFeed.map((m, i) => (
-                <div key={i} className="card">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--pink-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>{m.who === 'me' ? '🌸' : '🐰'}</div>
-                    <div><div style={{ fontSize: '14px', color: 'var(--text)', fontWeight: '500' }}>{m.who === 'me' ? '我' : '哥哥'}</div><div style={{ fontSize: '11px', color: 'var(--text-light)' }}>{m.time}</div></div>
-                  </div>
-                  <div style={{ fontSize: '14px', color: 'var(--text)', lineHeight: '1.5' }}>{m.text || ''}</div>
-                  {m.img && <img src={m.img} style={{ maxWidth: '100%', borderRadius: '10px', marginTop: '8px', display: 'block' }} />}
-                </div>
-              ))}
-            </div>
+            <div id="momentFeed"></div>
           </div>
         </div>
 
@@ -783,6 +885,22 @@ function App() {
           if (!f) return;
           const r = new FileReader();
           r.onload = (ev) => { setMomentImgData(ev.target.result); document.getElementById('momentImgPreview').textContent = '已选1张图'; showToast('图片已选'); };
+          r.readAsDataURL(f);
+          e.target.value = '';
+        }} />
+        <input type="file" ref={agentAvatarInputRef} className="hidden-file" accept="image/*" onChange={(e) => {
+          const f = e.target.files[0];
+          if (!f) return;
+          const r = new FileReader();
+          r.onload = (ev) => { setNewAgentAvatar(ev.target.result); showToast('头像已选'); };
+          r.readAsDataURL(f);
+          e.target.value = '';
+        }} />
+        <input type="file" id="bgInput" className="hidden-file" accept="image/*" onChange={(e) => {
+          const f = e.target.files[0];
+          if (!f) return;
+          const r = new FileReader();
+          r.onload = (ev) => { document.getElementById('chatArea').style.backgroundImage = `url(${ev.target.result})`; document.getElementById('chatArea').style.backgroundSize = 'cover'; showToast('背景已更换'); };
           r.readAsDataURL(f);
           e.target.value = '';
         }} />
