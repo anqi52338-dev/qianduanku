@@ -78,7 +78,6 @@ function App() {
     }
   }, [curSession, sessions, myAvatar, hisAvatar]);
 
-  // 每次 sessions 变化时重新渲染
   useEffect(() => {
     renderChat();
   }, [renderChat]);
@@ -211,10 +210,8 @@ function App() {
     if (isLoading) return;
     setIsLoading(true);
 
-    // 1. 获取当前会话的消息列表
     const currentMsgs = sessions[curSession]?.msgs || [];
     
-    // 2. 创建用户消息
     const userMsg = {
       id: Date.now() + '_user',
       role: 'me',
@@ -223,7 +220,6 @@ function App() {
       time: nowTime()
     };
 
-    // 3. 立即更新本地状态（显示用户消息）
     const updatedMsgs = [...currentMsgs, userMsg];
     const updatedSession = {
       ...sessions[curSession],
@@ -265,7 +261,6 @@ function App() {
         }
       } else replies = ['抱歉，暂时没有回复'];
 
-      // 4. 逐条添加 AI 回复
       let allMsgs = [...updatedMsgs];
       for (let i = 0; i < replies.length && i < 6; i++) {
         const replyText = replies[i];
@@ -277,17 +272,16 @@ function App() {
           time: nowTime()
         };
         allMsgs = [...allMsgs, replyMsg];
-        const updatedSessionWithReply = {
+        const sessionWithReply = {
           ...sessions[curSession],
           msgs: allMsgs
         };
         const newSessionsWithReply = [...sessions];
-        newSessionsWithReply[curSession] = updatedSessionWithReply;
+        newSessionsWithReply[curSession] = sessionWithReply;
         setSessions(newSessionsWithReply);
         if (i < replies.length - 1 && i < 5) await new Promise(resolve => setTimeout(resolve, 500));
       }
 
-      // 5. 如果后端返回了表情包
       if (data.sticker) {
         const stickerMsg = {
           id: Date.now() + '_sticker_auto',
@@ -308,7 +302,6 @@ function App() {
 
       setIsLoading(false);
       if (sessions[curSession]?.id) loadMemories(sessions[curSession].id);
-      loadSessions();
     } catch (error) {
       console.error('发送失败:', error);
       showToast('发送失败，请检查网络');
