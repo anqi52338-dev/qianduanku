@@ -18,15 +18,28 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+html,
 body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
   background: #e8d5dc;
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
   overflow: hidden;
-  margin: 0;
+}
+
+#root {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .phone {
@@ -39,8 +52,12 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  margin: 0 auto;
+  left: 0;
+  right: 0;
 }
 
+/* 大屏设备（平板、桌面）圆角效果 */
 @media (min-width: 400px) {
   .phone {
     border-radius: 32px;
@@ -50,6 +67,17 @@ body {
   }
 }
 
+/* ===== iOS Safari 专用修复 ===== */
+@supports (-webkit-touch-callout: none) {
+  .phone {
+    margin-left: auto;
+    margin-right: auto;
+    left: 0;
+    right: 0;
+  }
+}
+
+/* ===== 欢迎页 ===== */
 #welcome {
   position: absolute;
   inset: 0;
@@ -98,6 +126,7 @@ body {
   background: var(--bg);
 }
 
+/* ===== 顶栏 ===== */
 .topbar {
   padding: 10px 12px 6px;
   display: flex;
@@ -173,11 +202,16 @@ body {
   cursor: pointer;
 }
 
+/* ===== 聊天区域 ===== */
 .chat-area {
   flex: 1;
   overflow-y: auto;
   padding: 8px 14px 12px;
   -webkit-overflow-scrolling: touch;
+  background: var(--bg);
+  background-size: cover;
+  background-position: center;
+  transition: background 0.3s;
 }
 .msg {
   display: flex;
@@ -267,6 +301,7 @@ body {
   margin-top: 4px;
 }
 
+/* ===== 输入区域 ===== */
 .input-area {
   padding: 6px 12px 2px;
   background: var(--bg);
@@ -306,6 +341,10 @@ body {
   align-items: center;
   justify-content: center;
 }
+.send-circle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 .tool-row {
   display: flex;
   align-items: center;
@@ -336,6 +375,7 @@ body {
   white-space: nowrap;
 }
 
+/* ===== 底部导航 ===== */
 .bottom-nav {
   height: 62px;
   display: flex;
@@ -380,6 +420,7 @@ body {
   cursor: pointer;
 }
 
+/* ===== 侧边栏 ===== */
 .sidebar {
   position: absolute;
   top: 0;
@@ -470,6 +511,7 @@ body {
   pointer-events: auto;
 }
 
+/* ===== 页面（设置/记忆/Home/朋友圈/表情包） ===== */
 .page {
   position: absolute;
   inset: 0;
@@ -488,6 +530,7 @@ body {
   gap: 8px;
   background: var(--bg);
   flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
 }
 .page-head .back {
   border: none;
@@ -512,6 +555,7 @@ body {
   padding: 12px 16px 40px;
 }
 
+/* ===== 卡片 ===== */
 .card {
   background: var(--white);
   border-radius: 14px;
@@ -584,6 +628,7 @@ body {
   margin-top: 6px;
 }
 
+/* ===== 头像上传 ===== */
 .avatar-upload-row {
   display: flex;
   gap: 20px;
@@ -619,6 +664,7 @@ body {
   color: var(--text-light);
 }
 
+/* ===== 表情包 ===== */
 .sticker-tabs {
   display: flex;
   margin-bottom: 14px;
@@ -684,6 +730,7 @@ body {
   margin-top: 2px;
 }
 
+/* ===== Toast ===== */
 .toast {
   position: absolute;
   bottom: 90px;
@@ -703,9 +750,12 @@ body {
 .toast.show {
   opacity: 1;
 }
+
 .hidden-file {
   display: none;
 }
+
+/* ===== Emoji 面板 ===== */
 .emoji-panel {
   display: none;
   background: var(--white);
@@ -713,11 +763,11 @@ body {
   max-height: 160px;
   overflow-y: auto;
   border-top: 1px solid var(--border);
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
 }
 .emoji-panel.show {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
 }
 .emoji-panel span,
 .emoji-panel img {
@@ -730,7 +780,12 @@ body {
   cursor: pointer;
   border-radius: 8px;
 }
+.emoji-panel span:hover,
+.emoji-panel img:hover {
+  background: var(--pink-soft);
+}
 
+/* ===== 链接弹窗 ===== */
 .link-modal {
   position: absolute;
   inset: 0;
@@ -785,4 +840,51 @@ body {
 .link-actions .ok {
   background: var(--pink-deep);
   color: #fff;
+}
+
+/* ===== 弹窗（创建群聊/智能体） ===== */
+.modal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 130;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-box {
+  background: var(--white);
+  border-radius: 16px;
+  padding: 20px;
+  width: 85%;
+  max-width: 340px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.modal-box h3 {
+  font-size: 17px;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+.modal-box input[type="text"],
+.modal-box textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--pink-soft);
+  outline: none;
+  margin-bottom: 8px;
+}
+.modal-box textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+.modal-box label {
+  font-size: 13px;
+  color: var(--text-light);
+  display: block;
+  margin-bottom: 4px;
 }
