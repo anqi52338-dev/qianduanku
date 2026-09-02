@@ -210,11 +210,24 @@ function App() {
     if (isLoading) return;
     setIsLoading(true);
 
-    const userMsg = { id: Date.now() + '_user', role: 'me', text: text || '看看这张图', img: pendingImage || null, time: nowTime() };
-    const newMsgs = [...sessions[curSession].msgs, userMsg];
-    const newSessions = [...sessions];
-    newSessions[curSession] = { ...newSessions[curSession], msgs: newMsgs };
-    setSessions(newSessions);
+    // 1. 先创建用户消息
+    const userMsg = {
+      id: Date.now() + '_user',
+      role: 'me',
+      text: text || '看看这张图',
+      img: pendingImage || null,
+      time: nowTime()
+    };
+
+    // 2. 更新本地消息列表（立即显示用户消息）
+    const currentMsgs = sessions[curSession]?.msgs || [];
+    const updatedMsgs = [...currentMsgs, userMsg];
+    const updatedSessions = [...sessions];
+    updatedSessions[curSession] = {
+      ...updatedSessions[curSession],
+      msgs: updatedMsgs
+    };
+    setSessions(updatedSessions);
     setInputText('');
     setPendingImage(null);
     setTimeout(renderChat, 0);
@@ -249,19 +262,29 @@ function App() {
         }
       } else replies = ['抱歉，暂时没有回复'];
 
-      let currentMsgs = [...newMsgs];
+      // 3. 逐步添加AI回复
+      let allMsgs = [...updatedMsgs];
       for (let i = 0; i < replies.length && i < 6; i++) {
         const replyText = replies[i];
         if (!replyText) continue;
-        const replyMsg = { id: Date.now() + '_reply_' + i, role: 'other', text: replyText, time: nowTime() };
-        currentMsgs = [...currentMsgs, replyMsg];
-        const finalSessions = [...newSessions];
-        finalSessions[curSession] = { ...finalSessions[curSession], msgs: currentMsgs };
+        const replyMsg = {
+          id: Date.now() + '_reply_' + i,
+          role: 'other',
+          text: replyText,
+          time: nowTime()
+        };
+        allMsgs = [...allMsgs, replyMsg];
+        const finalSessions = [...updatedSessions];
+        finalSessions[curSession] = {
+          ...finalSessions[curSession],
+          msgs: allMsgs
+        };
         setSessions(finalSessions);
         setTimeout(renderChat, 0);
         if (i < replies.length - 1 && i < 5) await new Promise(resolve => setTimeout(resolve, 500));
       }
 
+      // 4. 如果后端返回了表情包
       if (data.sticker) {
         const stickerMsg = {
           id: Date.now() + '_sticker_auto',
@@ -270,9 +293,12 @@ function App() {
           text: `（${data.sticker.name || '表情'}）`,
           time: nowTime()
         };
-        const stickerSessions = [...newSessions];
-        const updatedMsgs = [...currentMsgs, stickerMsg];
-        stickerSessions[curSession] = { ...stickerSessions[curSession], msgs: updatedMsgs };
+        allMsgs = [...allMsgs, stickerMsg];
+        const stickerSessions = [...updatedSessions];
+        stickerSessions[curSession] = {
+          ...stickerSessions[curSession],
+          msgs: allMsgs
+        };
         setSessions(stickerSessions);
         setTimeout(renderChat, 0);
       }
@@ -288,9 +314,19 @@ function App() {
   };
 
   const sendSticker = (src, name) => {
-    const newMsgs = [...sessions[curSession].msgs, { id: Date.now() + '_sticker', role: 'me', img: src, text: name ? `（${name}）` : '', time: nowTime() }];
+    const currentMsgs = sessions[curSession]?.msgs || [];
+    const newMsgs = [...currentMsgs, {
+      id: Date.now() + '_sticker',
+      role: 'me',
+      img: src,
+      text: name ? `（${name}）` : '',
+      time: nowTime()
+    }];
     const newSessions = [...sessions];
-    newSessions[curSession] = { ...newSessions[curSession], msgs: newMsgs };
+    newSessions[curSession] = {
+      ...newSessions[curSession],
+      msgs: newMsgs
+    };
     setSessions(newSessions);
     setActivePage(null);
     setTimeout(renderChat, 0);
