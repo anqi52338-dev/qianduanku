@@ -221,12 +221,11 @@ function App() {
     };
 
     const updatedMsgs = [...currentMsgs, userMsg];
-    const updatedSession = {
-      ...sessions[curSession],
+    const newSessions = [...sessions];
+    newSessions[curSession] = {
+      ...newSessions[curSession],
       msgs: updatedMsgs
     };
-    const newSessions = [...sessions];
-    newSessions[curSession] = updatedSession;
     setSessions(newSessions);
     setInputText('');
     setPendingImage(null);
@@ -272,13 +271,12 @@ function App() {
           time: nowTime()
         };
         allMsgs = [...allMsgs, replyMsg];
-        const sessionWithReply = {
-          ...sessions[curSession],
+        const replySessions = [...sessions];
+        replySessions[curSession] = {
+          ...replySessions[curSession],
           msgs: allMsgs
         };
-        const newSessionsWithReply = [...sessions];
-        newSessionsWithReply[curSession] = sessionWithReply;
-        setSessions(newSessionsWithReply);
+        setSessions(replySessions);
         if (i < replies.length - 1 && i < 5) await new Promise(resolve => setTimeout(resolve, 500));
       }
 
@@ -291,17 +289,17 @@ function App() {
           time: nowTime()
         };
         allMsgs = [...allMsgs, stickerMsg];
-        const finalSession = {
-          ...sessions[curSession],
+        const stickerSessions = [...sessions];
+        stickerSessions[curSession] = {
+          ...stickerSessions[curSession],
           msgs: allMsgs
         };
-        const finalSessions = [...sessions];
-        finalSessions[curSession] = finalSession;
-        setSessions(finalSessions);
+        setSessions(stickerSessions);
       }
 
       setIsLoading(false);
       if (sessions[curSession]?.id) loadMemories(sessions[curSession].id);
+      // ⚠️ 注意：这里没有 loadSessions()，不会覆盖本地状态
     } catch (error) {
       console.error('发送失败:', error);
       showToast('发送失败，请检查网络');
