@@ -1,0 +1,40 @@
+.life-tabs { display: flex; gap: 6px; overflow-x: auto; flex-shrink: 0; padding: 2px 0 9px; scrollbar-width: thin; }
+.life-tabs button { flex-shrink: 0; padding: 7px 12px; border: 1px solid var(--gold-soft); border-radius: 18px; background: var(--ivory); color: var(--ink-2); font: 13px var(--serif); }
+.life-tabs button.on { color: var(--ivory); background: var(--rose-deep); border-color: var(--gold); }
+.life-caption { font: 14px var(--serif); color: var(--rose-deep); }
+.life-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.life-meta { font-size: 11px; color: var(--ink-3); margin-bottom: 9px; }
+.life-meta time { float: right; }
+.life-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
+.life-entry h4 { margin-bottom: 8px; overflow-wrap: anywhere; }
+.life-entry .life-text { font-size: 13px; }
+.letter-paper { background: repeating-linear-gradient(transparent 0 27px,rgba(179,147,90,.09) 27px 28px),var(--ivory); }
+.life-ai { margin-top: 18px; padding: 14px; border-left: 2px solid var(--gold); background: var(--blush); border-radius: 0 10px 10px 0; }
+.life-ai b { color: var(--rose-deep); font: 14px var(--serif); }
+.collection-message { padding: 12px 0; border-bottom: 1px solid var(--line); }
+.collection-message b { font-size: 11px; color: var(--ink-3); }
+.collection-message img, .history-image { display: block; max-width: 150px; max-height: 160px; object-fit: contain; margin-top: 8px; }
+.period-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; text-align: center; }
+.period-grid span { padding: 6px 0; border-radius: 50%; border: 1px solid transparent; }
+.period-grid b { color: var(--gold); font-weight: normal; font-size: 12px; padding-bottom: 8px; }
+.period-grid .marked { background: var(--petal); color: var(--rose-deep); }
+.period-grid .today { border-color: var(--gold); }
+.isolated-messages { max-height: 38vh; overflow-y: auto; margin: 12px 0; }
+.isolated-message { border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; background: var(--blush); }
+.isolated-message.user { margin-left: 22px; background: var(--petal); }
+.isolated-message.assistant { margin-right: 22px; }
+.isolated-message b { color: var(--gold); font-size: 11px; }
+.history-pick { font-size: 12px; color: var(--ink-2); }
+.history-hit { scroll-margin: 8px; }
+.quote-pending { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; padding: 9px 12px; border-left: 2px solid var(--gold); border-radius: 8px; background: var(--blush); font-size: 11px; }
+.quote-pending[hidden] { display: none; }
+.quote-pending div { min-width: 0; flex: 1; }
+.quote-pending b { color: var(--rose-deep); display: block; margin-bottom: 3px; }
+.quote-pending span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink-3); }
+.quote-pending button { color: var(--gold); padding: 4px; font-size: 19px; }
+.msg-quote { border-left: 2px solid var(--gold); padding: 6px 10px; font-size: 11px; max-width: 100%; color: var(--ink-2); background: var(--blush); border-radius: 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.message-actions { display: flex; gap: 11px; }
+.message-actions button { font-size: 10px; color: var(--ink-3); padding: 2px 0; }
+.message-actions button:hover { color: var(--rose-deep); }
+#openLife { position: relative; }
+#openLife[data-due]:not([data-due=""])::after { content: attr(data-due); position: absolute; right: 0; top: 1px; min-width: 12px; border-radius: 8px; padding: 0 3px; background: var(--rose-deep); color: var(--ivory); font-size: 9px; }

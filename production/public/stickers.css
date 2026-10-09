@@ -1,0 +1,34 @@
+.top-tools { display: flex; gap: 7px; align-items: center; }
+.st-intro { padding: 16px; background: radial-gradient(ellipse at 100% 0, var(--petal), transparent 70%), var(--ivory); }
+.st-intro b { display: block; font: 600 20px var(--serif); letter-spacing: .1em; color: var(--rose-deep); margin-bottom: 6px; }
+.st-intro p { font: 13px/1.8 var(--serif); color: var(--ink-2); }
+.st-owner-row { display: flex; flex-wrap: wrap; gap: 7px; }
+.st-search { margin-top: 12px; }
+.st-library-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); grid-auto-rows: 142px; gap: 12px; }
+.st-library-item { padding: 7px; border: 1px solid var(--gold-soft); border-radius: 12px; min-width: 0; display: flex; flex-direction: column; background: var(--ivory); }
+.st-pick { width: 100%; height: 84px; display: grid; place-items: center; }
+.st-pick img { width: 76px; height: 76px; object-fit: contain; background: transparent; }
+.st-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 13px var(--serif); text-align: center; margin: 3px 0; }
+.st-actions { display: flex; justify-content: center; gap: 10px; margin-top: auto; }
+.st-actions button { color: var(--ink-2); font-size: 11px; padding: 3px 0; }
+.st-actions button.on { color: var(--rose-deep); }
+.st-editor { padding: 16px; }
+.st-editor .drop { height: 110px; }
+.st-editor .drop img { width: 92px; height: 92px; object-fit: contain; background: transparent; }
+.st-editor .label { margin-top: 14px; }
+.st-editor select { width: 100%; }
+.st-editor-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.st-editor-head h4 { margin: 0; }
+.st-count { font-size: 11px; color: var(--ink-2); }
+.sticker-pending { display: flex; align-items: center; gap: 12px; border: 1px solid var(--gold-soft); border-radius: 12px; background: var(--blush); padding: 8px 12px; margin-bottom: 9px; }
+.sticker-pending img { width: 52px; height: 52px; object-fit: contain; background: transparent; }
+.sticker-pending b { display: block; font: 600 13px var(--serif); color: var(--rose-deep); }
+.sticker-pending span { font-size: 11px; color: var(--ink-2); }
+.sticker-pending button { margin-left: auto; padding: 10px; color: var(--rose-deep); }
+.sticker-img { width: 116px; height: 116px; object-fit: contain; border: 0; border-radius: 0; box-shadow: none; background: transparent; }
+.emoji-st { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); grid-auto-rows: 68px; gap: 9px; max-height: 155px; overflow-y: auto; overflow-x: hidden; }
+.emoji-st .quick-sticker { display: grid; place-items: center; padding: 0; border: 0; width: 100%; border-radius: 8px; }
+.emoji-st .quick-sticker img { width: 58px; height: 58px; object-fit: contain; background: transparent; border: 0; border-radius: 0; }
+.emoji-st #stkManage { white-space: normal; width: 100%; font-size: 11px; border-radius: 10px; }
+.st-empty { grid-column: 1/-1; padding: 24px 15px; border: 1px dashed var(--gold-soft); border-radius: 12px; text-align: center; font: 14px/1.8 var(--serif); color: var(--ink-2); }
+.st-form-note { color: var(--ink-2); font-size: 11px; margin-top: 8px; }

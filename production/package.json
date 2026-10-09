@@ -1,0 +1,10 @@
+{
+  "name": "our-home-production-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "dev": "node tools/dev.cjs",
+    "check": "node tools/check.cjs"
+  }
+}

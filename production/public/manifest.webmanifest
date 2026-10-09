@@ -1,0 +1,9 @@
+{
+  "name": "我们的家",
+  "short_name": "我们的家",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fcf1f0",
+  "theme_color": "#fcf1f0",
+  "icons": [{ "src": "/app/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
