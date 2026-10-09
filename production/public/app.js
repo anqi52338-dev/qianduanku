@@ -294,6 +294,8 @@ async function refreshState() { const st = await api('/api/state'); Object.assig
 async function saveProfile(patch, quiet) { try { S.profile = (await api('/api/profile', 'PUT', patch)).profile; applyState(); renderChat(); if (!quiet) toast('保存好了'); } catch (e) { toast(e.message); } }
 
 function go(page) {
+  if (S.page === 'candy' && page !== 'candy') window.CandyJar?.leave();
+  if (page === 'candy') window.CandyJar?.open();
   if (S.page === 'reading' && page !== 'reading') window.Coread?.leave();
   if (page === 'reading') window.Coread?.open();
   if (page === 'stickers') renderStickers();
@@ -309,6 +311,8 @@ function go(page) {
 
 // ===== 事件 =====
 function wire() {
+  window.CandyJar?.init({ api, toast, go, draft: text => { go('chat'); $('#input').value = text; setComposer(); $('#input').focus(); } });
+  $('#openCandy').onclick = () => go('candy');
   window.Life?.init({ api, toast, go, quote: setQuote, draft: text => { go('chat'); $('#input').value = text; setComposer(); $('#input').focus(); }, prefs: p => { S.lifePrefs = p; }, messagesChanged: async retry => { S.msgs = []; await loadMessages(); renderChat(); if (retry) talk({ retry: true }); }, smallNote: text => { go('chat'); talk({ text, smallNote: true }); } });
   $('#quoteCancel').onclick = () => setQuote(null);
   $('#openHistory').onclick = () => go('history'); $('#openLife').onclick = () => go('life');

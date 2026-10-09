@@ -1,0 +1,41 @@
+(() => {
+  const $=s=>document.querySelector(s), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const colors={'可乐':'#8c6260','青苹果':'#a3bb8a','焦糖咖啡':'#c99d7f','蜜桃':'#e3a4a7','荔枝':'#d1bab9','橘子汽水':'#e3ac79','柠檬':'#d8c978','绵云':'#cec3de','葡萄':'#b299c2','草莓奶':'#e4afc0','树莓红':'#cf8f9f','芭乐':'#daa0ae','紫藤':'#b4a8d0','巧克力':'#9d8071'};
+  const shapes={'五角星':'✦','三角':'▵','心形':'♡','爱心':'♡','方糖':'◇','和果子':'❀'};
+  let app,data,tab='jar',selected=null,receipt='',active=false,working=false,version=0,clockOffset=0,timer,poll;
+  const root=()=>$('#candyRoot');
+  function sweet(c,source) {return `<button type="button" class="cj-sweet" data-pick="${c.index}" data-source="${source}" style="--sweet:${colors[c.scheme]||'#c4a3b8'}" aria-label="${esc(c.scheme+'色的'+c.shape+'，查看这颗糖')}">${shapes[c.shape]||'●'}</button>`;}
+  function effects() {return `<div class="cj-active">${data.state.active.map(a=>`<div class="cj-effect"><b>${a.target==='ai'?'他':'我'} · ${esc(a.name)}</b><p>${esc(a.reveal)}</p><time class="cj-countdown" data-expires="${esc(a.expires)}"></time></div>`).join('')}</div>`;}
+  function render() {
+    if(!data)return;const s=data.state;
+    let body='';
+    if(tab==='jar')body=`<div class="cj-hero"><span class="cj-eyebrow">A Little Sweet Surprise</span><h4>${s.jar?esc(s.jar.name)+'之罐':'今天，想尝哪一种奇遇？'}</h4><p>${s.jar?'只看得见外观，吃下去才知道是什么。':'每天选一罐，明天北京时间零点再选。'}</p>${s.jar?`<div class="cj-jar"><div class="cj-grid">${s.jar.candies.map(c=>sweet(c,'jar')).join('')||'<p style="grid-column:1/-1">今天的糖吃完了，明天再来。</p>'}</div></div>`:`<div class="cj-choices">${s.jars.map(j=>`<button class="cj-choice" data-choose="${j.number}"><b>${esc(j.name)} <span class="cj-badge">${esc(j.category)}</span></b><span>${esc(j.line)}</span></button>`).join('')}</div>`}<div class="cj-caption"><span>${esc(s.day)}${s.jar?' · 还剩 '+s.jar.candies.length+' 颗':''}</span><span>勇气 ✦ ${s.courage.user||0} · 他 ${s.courage.ai||0}</span></div></div>`;
+    if(tab==='reserve')body=`<div class="card"><h4>我的储藏罐</h4><p class="note">从商店带回来的糖会留在这里，跨天也不会消失。</p><div class="cj-storage">${s.reserve.map(c=>`<div>${sweet(c,'reserve')}<p class="note">${esc(c.name||c.shape)}</p></div>`).join('')}</div>${s.reserve.length?'':'<div class="empty">先尝一颗，再把喜欢的带回来。</div>'}</div>`;
+    if(tab==='dex'||tab==='shop')body=(tab==='shop'?`<div class="card"><h4>神秘柜</h4><p class="note">花 ${s.mysteryPrice} 点勇气，把今日罐里没收集过的品种混进一颗。</p><button class="btn primary" data-mystery ${s.jar?'':'disabled'}>带走一份惊喜 · ${s.mysteryPrice} ✦</button></div>`:'')+`<p class="note">${tab==='shop'?'指名陈列 · 已尝过的糖，5 点勇气带回储藏罐':'共同图鉴 · '+s.dex.length+' / '+s.total+' 种'}</p>`+s.dex.map(c=>`<article class="card cj-card"><h4>${esc(c.name)} <span class="cj-badge">× ${c.count}</span></h4><p class="cj-desc">${esc(c.reveal)}</p><p class="note">${esc(c.taste)}</p>${tab==='dex'?`<p class="note">${esc(c.lore)}</p>`:`<button class="btn" data-buy="${esc(c.id)}" ${s.onceUsed.includes(c.id)?'disabled':''}>${s.onceUsed.includes(c.id)?'今天已经买过':'放进储藏罐 · 5 ✦'}</button>`}</article>`).join('')+(s.dex.length?'':'<div class="empty">尝过的糖，会在这里慢慢亮起来。</div>');
+    if(tab==='ledger')body=`<div class="card"><h4>一起尝过的甜</h4><p class="note">最近 80 笔吃糖记录，换设备也能继续看。</p><ul class="cj-ledger">${[...s.ledger].reverse().map(e=>`<li>${e.target==='ai'?'他':'我'}尝了「${esc(e.name)}」${e.from?' · 对方递来的':''}<time>${esc(e.t.replace('T',' '))} · ${e.mins?e.mins+' 分钟':'即时效果'}</time></li>`).join('')||'<li>第一笔，留给今天。</li>'}</ul></div>`;
+    root().innerHTML=`<button class="btn cj-return" data-back>‹ 回到聊天</button><div class="cj-tabs" role="navigation" aria-label="糖果罐分类">${Object.entries({jar:'今日罐',reserve:'储藏罐',dex:'图鉴',shop:'商店',ledger:'账本'}).map(([key,label])=>`<button data-tab="${key}" class="${tab===key?'on':''}">${label}</button>`).join('')}</div><div class="cj-controls"><label><input type="checkbox" id="candyEnabled" ${data.prefs.enabled?'checked':''}>聊天糖果效果</label><label><input type="checkbox" id="candyAuto" ${data.prefs.autonomous?'checked':''}>允许他自主拿糖</label></div>${!data.prefs.enabled?'<p class="note">聊天效果已关闭，仍可以开罐、收集和逛商店。</p>':''}${data.offer?'<div class="card"><h4>他递来了一颗糖</h4><p class="note">接受后才会消耗糖果、记录效果。</p><div class="cj-actions"><button class="btn primary" data-offer="accept">接受</button><button class="btn" data-offer="decline">这次不了</button></div></div>':''}${effects()}${s.active.length?'<button class="btn" data-clear>结束所有糖果效果</button>':''}${receipt?`<div class="cj-receipt" role="status">${esc(receipt)}<div class="cj-actions"><button class="btn" data-tell>告诉他，聊聊这颗糖</button><button class="btn" data-hide-receipt>收好</button></div></div>`:''}${body}${selected?detail():''}<p class="cj-credit">来自 <a href="https://github.com/mamo0521/causality-candy-jar" target="_blank" rel="noopener noreferrer">mamo · 因果律软糖罐</a><br>个人非商业使用 · 糖果文案 CC BY-NC-SA 4.0</p>`;
+    countdown();root().querySelectorAll('button,input').forEach(b=>{if(working)b.disabled=true;});
+  }
+  function detail(){const c=selected.card;return `<article class="card cj-card" id="candyDetail" tabindex="-1"><h4>${esc(c.scheme)}色的${esc(c.shape)}</h4><p class="cj-desc">${esc(c.shop)}</p><p class="note">自己吃今日罐里的糖可获得勇气；旧效果还有 10 分钟以上时顶掉它，会扣 2 点勇气。</p><div class="cj-actions"><button class="btn primary" data-eat="user">我吃一颗</button><button class="btn" data-eat="ai">喂给他</button><button class="btn" data-unpick>放回去</button></div></article>`;}
+  function countdown(){if(!data)return;const now=Date.now()+clockOffset;root().querySelectorAll('[data-expires]').forEach(el=>{const sec=Math.max(0,Math.ceil((Date.parse(el.dataset.expires)-now)/1000));el.textContent=sec?`${Math.floor(sec/60)}:${String(sec%60).padStart(2,'0')} 后恢复平常`:'效果已结束';});}
+  function setData(r){data=r;clockOffset=Date.parse(r.state.serverTime)-Date.now();if(selected){const list=selected.source==='jar'?r.state.jar?.candies:r.state.reserve;const found=list?.find(c=>c.index===selected.card.index&&c.id===selected.card.id);selected=found?{...selected,card:found}:null;}}
+  async function load(){const id=++version;try{const r=await app.api('/api/candy');if(id!==version||!active)return;setData(r);render();}catch(e){if(id===version){root().innerHTML='<div class="card"><p>'+esc(e.message)+'</p><button class="btn" data-refresh>再试一次</button><button class="btn" data-back>返回聊天</button></div>';}}}
+  async function change(path,b){++version;working=true;render();try{const r=await app.api('/api/candy/'+path,'POST',b);setData(r);selected=null;receipt=r.receipt||receipt;app.toast(r.receipt?'糖罐记好了':'保存好了');}catch(e){app.toast(e.message);}finally{working=false;render();}}
+  function init(options){app=options;root().onclick=async e=>{const button=e.target.closest('button');if(!button||working)return;const b=button.dataset;
+    if('back'in b){app.go('chat');return;}if('refresh'in b)return load();
+    if(b.tab){tab=b.tab;selected=null;render();return;}
+    if(b.choose)return change('choose',{jar:Number(b.choose)});
+    if('pick'in b){const list=b.source==='jar'?data.state.jar.candies:data.state.reserve;selected={source:b.source,card:list.find(c=>c.index===Number(b.pick))};render();$('#candyDetail').focus();$('#candyDetail').scrollIntoView({block:'nearest',behavior:'smooth'});return;}
+    if(b.eat&&selected)return change('eat',{day:data.state.day,source:selected.source,index:selected.card.index,target:b.eat});
+    if('mystery'in b)return change('buy',{dest:'today'});
+    if(b.buy)return change('buy',{dest:'reserve',id:b.buy});
+    if(b.offer)return change('offer',{accept:b.offer==='accept'});
+    if('clear'in b)return change('clear',{});
+    if('unpick'in b){selected=null;render();return;}
+    if('hideReceipt'in b){receipt='';render();return;}
+    if('tell'in b)app.draft('刚刚在糖果罐里：\n'+receipt+'\n我们接着聊吧。');
+  };root().onchange=e=>{if(working)return;if(e.target.id==='candyEnabled')change('prefs',{enabled:e.target.checked});if(e.target.id==='candyAuto')change('prefs',{autonomous:e.target.checked});};}
+  function leave(){active=false;++version;clearInterval(timer);clearInterval(poll);}
+  function open(){leave();active=true;root().innerHTML='<div class="empty">正在打开糖果罐…</div>';load();timer=setInterval(countdown,1000);poll=setInterval(()=>{if(active&&!working&&!document.hidden&&!selected)load();},20000);}
+  window.CandyJar={init,open,leave};
+})();
