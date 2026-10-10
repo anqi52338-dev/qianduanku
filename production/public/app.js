@@ -65,6 +65,15 @@ function setQuote(message) {
 }
 
 // ===== 聊天渲染 =====
+function displayReplyText(text) {
+  const characters=[...String(text||'').matchAll(/\S/g)],normalized=characters.map(m=>m[0]).join('');
+  for(let repeats=4;repeats>=2;repeats--){
+    const length=normalized.length/repeats;
+    if(Number.isInteger(length)&&length>=8&&normalized.slice(0,length).repeat(repeats)===normalized)
+      return text.slice(0,characters[length-1].index+1).trim();
+  }
+  return text;
+}
 function renderChat(keepScroll) {
   const box = $('#msgs'); const before = box.scrollHeight - box.scrollTop;
   if (!S.msgs.length) {
@@ -76,7 +85,7 @@ function renderChat(keepScroll) {
       const day = dayOf(m.ts);
       if (day !== lastDay) { html += `<div class="day">${day}</div>`; lastDay = day; }
       const who = m.role === 'me' ? 'me' : 'him';
-      const parts = m.type === 'sticker' ? [] : who === 'him' ? m.text.split(/\n{2,}/).filter((p) => p.trim()) : (m.text ? [m.text] : []);
+      const parts = m.type === 'sticker' ? [] : who === 'him' ? displayReplyText(m.text).split(/\n{2,}/).filter((p) => p.trim()) : (m.text ? [m.text] : []);
       const src = m.localImage || (m.image ? fileUrl(m.image) : '');
       html += `<div class="msg ${who}" data-message="${esc(m.id)}"><span class="av">${avatar(who)}</span><div class="col">${src ? `<img class="${m.type==='sticker'?'sticker-img':'pic'}" src="${esc(src)}" alt="${m.type==='sticker'?'表情':'图片'}" loading="lazy">` : ''}${m.quote_text ? `<div class="msg-quote">${esc(m.quote_role === 'me' ? '我' : hisName())}：${esc(m.quote_text)}</div>` : ''}${parts.map((p) => `<div class="bubble">${rich(p.trim())}</div>`).join('')}${who === 'him' && m.type !== 'sticker' && m.text?.trim() && typeof m.id === 'number' ? `<button type="button" class="voice-play" data-voice="${m.id}" aria-label="朗读这条回复">▷ 听这句</button>` : ''}${typeof m.id === 'number' ? `<div class="message-actions"><button data-quote="${m.id}">引用</button><button data-collect="${m.id}">收藏</button><button data-more="${m.id}" aria-label="消息操作">···</button></div>` : ''}<time>${hm(m.ts)}${m.src === 'backup' ? ' · 备用线路' : ''}</time></div></div>`;
     }
@@ -92,10 +101,19 @@ function setComposer() {
   $('#send').setAttribute('aria-label', S.busy ? '停止' : '发送');
   $('#topSub').textContent = S.busy ? (S.status || '正在输入…') : '在线';
 }
+function mergeMessages(existing, incoming) {
+  const result=[],positions=new Map();
+  for(const message of [...existing,...incoming]){
+    const key=String(message.id);
+    if(positions.has(key)) result[positions.get(key)]={...result[positions.get(key)],...message};
+    else {positions.set(key,result.length);result.push(message);}
+  }
+  return result;
+}
 async function loadMessages() {
   const d = await api('/api/messages?limit=60');
   const firstNew = d.messages[0]?.id ?? Infinity;
-  S.msgs = [...S.msgs.filter((m) => typeof m.id === 'number' && m.id < firstNew), ...d.messages];
+  S.msgs = mergeMessages(S.msgs.filter((m) => typeof m.id === 'number' && m.id < firstNew), d.messages);
   if (!S.msgs.some((m) => m.id < firstNew)) S.hasMore = d.hasMore;
   return d.busy;
 }
@@ -134,11 +152,11 @@ async function talk(body) {
         const line = buf.slice(0, i); buf = buf.slice(i + 1);
         if (!line.trim()) continue;
         const ev = JSON.parse(line);
-        if (ev.type === 'user') { S.msgs = S.msgs.filter(m => !String(m.id).startsWith('tmp-')); S.msgs.push(...(ev.messages || (ev.message ? [ev.message] : []))); }
+        if (ev.type === 'user') { S.msgs = S.msgs.filter(m => !String(m.id).startsWith('tmp-')); S.msgs = mergeMessages(S.msgs, ev.messages || (ev.message ? [ev.message] : [])); }
         else if (ev.type === 'status') { S.status = ev.text; setComposer(); }
         else if (ev.type === 'delta') { const b = $('#liveBubble'); if (b) { b.classList.remove('typing'); b.textContent = ev.text; const box = $('#msgs'); box.scrollTop = box.scrollHeight; } }
-        else if (ev.type === 'done') { ended = true; S.msgs.push(...(ev.messages || (ev.message ? [ev.message] : []))); }
-        else if (ev.type === 'error') { ended = true; if (ev.message) S.msgs.push(ev.message); toast(ev.code === 'needs_login' ? '服务器上的 Claude 还没登录，登录后再叫他' : (ev.error || '他这次没回上来')); }
+        else if (ev.type === 'done') { ended = true; S.msgs = mergeMessages(S.msgs, ev.messages || (ev.message ? [ev.message] : [])); }
+        else if (ev.type === 'error') { ended = true; if (ev.message) S.msgs = mergeMessages(S.msgs, [ev.message]); toast(ev.code === 'needs_login' ? '服务器上的 Claude 还没登录，登录后再叫他' : (ev.error || '他这次没回上来')); }
       }
     }
     lost = !ended;
@@ -358,7 +376,7 @@ function wire() {
     if (e.target.id === 'retry') talk({ retry: true });
     if (e.target.id === 'older') {
       e.target.disabled = true;
-      try { const d = await api(`/api/messages?limit=60&before=${S.msgs.find((m) => typeof m.id === 'number').id}`); S.msgs = [...d.messages, ...S.msgs]; S.hasMore = d.hasMore; renderChat(true); } catch (err) { toast(err.message); }
+      try { const d = await api(`/api/messages?limit=60&before=${S.msgs.find((m) => typeof m.id === 'number').id}`); S.msgs = mergeMessages(d.messages, S.msgs); S.hasMore = d.hasMore; renderChat(true); } catch (err) { toast(err.message); }
     }
   };
   $('#homeBody').onclick = (e) => { if (e.target.id === 'diaryWrite') writeDiary(e.target); };
