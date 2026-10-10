@@ -385,6 +385,7 @@ function wire() {
   $('#models').onclick = (e) => { const b = e.target.closest('[data-model]'); if (b) saveProfile({ model: b.dataset.model }, true); };
   $('#saveSettings').onclick = async () => { await saveProfile({ hisName: $('#hisName').value, persona: $('#persona').value, emotionEnabled: $('#emotionEnabled').checked, emotionRules: $('#emotionRules').value }); go('chat'); };
 
+  wireBackupModels();
   $('#bkMemory').onclick = (e) => e.currentTarget.classList.toggle('on');
   $('#bkChat').onclick = (e) => e.currentTarget.classList.toggle('on');
   const saveBackup = async () => { await api('/api/backup', 'PUT', { baseUrl: $('#bkUrl').value, model: $('#bkModel').value, key: $('#bkKey').value, memory: $('#bkMemory').classList.contains('on'), chat: $('#bkChat').classList.contains('on') }); await refreshState(); fillForms(); };
@@ -396,6 +397,54 @@ function wire() {
 
   wireVoice();
   wireStickers();
+}
+
+// ===== 备用线路模型选择 =====
+function wireBackupModels() {
+  const url = $('#bkUrl'), key = $('#bkKey'), model = $('#bkModel');
+  const button = $('#bkFetchModels'), picker = $('#bkModelPicker'), search = $('#bkModelSearch'), select = $('#bkSelect'), note = $('#bkModelsNote');
+  let models = [], revision = 0, timer;
+  const base = value => value.trim().replace(/\/+$/, '');
+  const signature = () => url.value.trim() + '\n' + key.value.trim();
+  const ready = () => base(url.value) && (key.value.trim() || (S.backup.hasKey && base(url.value) === base(S.backup.baseUrl || '')));
+  const render = () => {
+    const term = search.value.trim().toLowerCase();
+    const filtered = models.filter(m => (m.id + ' ' + m.name).toLowerCase().includes(term));
+    select.replaceChildren(new Option(filtered.length ? '请选择模型' : '没有匹配的模型，换个词试试', ''));
+    // Keep long catalogs usable on mobile; search still covers the complete list.
+    const shown = filtered.slice(0, 300);
+    const current = models.find(m => m.id === model.value.trim());
+    if (current && !shown.some(m => m.id === current.id)) shown.unshift(current);
+    for (const m of shown) select.add(new Option(m.name === m.id ? m.id : m.name + ' · ' + m.id, m.id));
+    select.value = current ? current.id : '';
+    note.className = 'note ok';
+    note.textContent = '已获取 ' + models.length + ' 个模型' + (filtered.length > 300 ? '，先显示 300 个，可以搜索缩小范围。' : '，请选择后保存线路。');
+  };
+  const load = async () => {
+    clearTimeout(timer);
+    if (!ready()) { note.className = 'note err'; note.textContent = '先填好 API 地址和对应的 Key，再获取模型。'; return; }
+    const ticket = ++revision, original = signature();
+    button.disabled = true; button.textContent = '获取中…'; note.className = 'note'; note.textContent = '正在获取可用模型…';
+    try {
+      const result = await api('/api/backup/models', 'POST', { baseUrl: url.value.trim(), key: key.value.trim() });
+      if (ticket !== revision || original !== signature()) return;
+      models = result.models; search.value = ''; picker.hidden = false; render();
+    } catch (e) {
+      if (ticket !== revision || original !== signature()) return;
+      models = []; picker.hidden = true; note.className = 'note err'; note.textContent = e.message + '。仍可手动填写模型名称。';
+    } finally {
+      if (ticket === revision) { button.disabled = false; button.textContent = '获取模型'; }
+    }
+  };
+  const invalidate = () => { clearTimeout(timer); ++revision; models = []; picker.hidden = true; search.value = ''; button.disabled = false; button.textContent = '获取模型'; note.className = 'note'; note.textContent = '填好地址和 Key 后会自动获取，也可以点按钮重试。'; };
+  for (const input of [url, key]) {
+    input.addEventListener('input', invalidate);
+    input.addEventListener('change', () => { clearTimeout(timer); if (ready()) timer = setTimeout(load, 300); });
+  }
+  button.onclick = load;
+  search.oninput = render;
+  select.onchange = () => { if (select.value) model.value = select.value; };
+  model.addEventListener('input', () => { select.value = models.some(m => m.id === model.value.trim()) ? model.value.trim() : ''; });
 }
 
 // ===== 他的声音 =====

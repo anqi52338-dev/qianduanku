@@ -442,13 +442,19 @@ textarea.field.tall { min-height: 190px; }
         </div>
         <div class="card">
           <h4>备用线路</h4>
-          <p class="note">填一个便宜的 API（OpenAI 兼容格式）。可以让它负责整理记忆来省订阅额度；订阅那边没回应时，也会自动由它顶上。</p>
+          <p class="note">接入 OpenAI 兼容的 API。填好地址和 Key 后会自动获取模型，选择喜欢的模型，再保存线路。</p>
           <label class="label" for="bkUrl">API 地址</label>
           <input class="field" id="bkUrl" type="text" autocomplete="off" placeholder="https://api.deepseek.com/v1">
           <label class="label" for="bkKey">API Key</label>
           <input class="field" id="bkKey" type="password" autocomplete="off" placeholder="sk-...">
-          <label class="label" for="bkModel">模型名称</label>
-          <input class="field" id="bkModel" type="text" autocomplete="off" placeholder="deepseek-chat">
+          <div class="row between" style="margin-top:14px"><label class="label" for="bkSelect" style="margin:0">选择模型</label><button class="btn" id="bkFetchModels" type="button">获取模型</button></div>
+          <div id="bkModelPicker" hidden style="margin-top:10px">
+            <input class="field" id="bkModelSearch" type="search" autocomplete="off" placeholder="搜索模型，比如 Claude、Sonnet" aria-label="搜索模型">
+            <select class="field" id="bkSelect" style="margin-top:8px" aria-label="选择模型"></select>
+          </div>
+          <p class="note" id="bkModelsNote" role="status" aria-live="polite">也可以点击获取模型；接口不提供列表时，手动填写即可。</p>
+          <label class="label" for="bkModel">模型名称 · 可手动填写</label>
+          <input class="field" id="bkModel" type="text" autocomplete="off" placeholder="选择上面的模型，或输入模型 ID">
           <div class="chips" style="margin-top:14px"><button class="chip" id="bkMemory">用它整理记忆</button><button class="chip" id="bkChat">平时也用它聊天</button></div>
           <div class="note" id="bkNote" style="margin-top:10px"></div>
           <div class="row between"><button class="btn" id="bkTest">测试</button><button class="btn primary" id="bkSave">保存线路</button></div>
@@ -482,6 +488,6 @@ textarea.field.tall { min-height: 190px; }
 <script src="/app/reading.js?v=1"></script>
 <script src="/app/life.js?v=1"></script>
 <script src="/app/candy.js?v=1"></script>
-<script src="/app/app.js?v=candy1"></script>
+<script src="/app/app.js?v=models1"></script>
 </body>
 </html>
