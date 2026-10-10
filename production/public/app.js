@@ -288,6 +288,7 @@ function fillForms() {
   $('#emotionEnabled').checked = !!S.profile.emotionEnabled; $('#emotionRules').value = S.profile.emotionRules || '';
   $('#hisName').value = hisName(); $('#persona').value = S.profile.persona || ''; $('#memText').value = S.memory || '';
   $('#bkUrl').value = S.backup.baseUrl || ''; $('#bkModel').value = S.backup.model || ''; $('#bkKey').value = '';
+  $('#bkMaxTokens').value = S.backup.maxTokens || 2048;
   $('#bkKey').placeholder = S.backup.hasKey ? '已保存，留空则不改' : 'sk-...';
 }
 async function refreshState() { const st = await api('/api/state'); Object.assign(S, { lifePrefs: st.lifePrefs || {}, voice: st.voice || {}, profile: st.profile, memory: st.memory, backup: st.backup, counts: st.counts, since: st.since, claude: st.claude }); applyState(); return st; }
@@ -388,7 +389,10 @@ function wire() {
   wireBackupModels();
   $('#bkMemory').onclick = (e) => e.currentTarget.classList.toggle('on');
   $('#bkChat').onclick = (e) => e.currentTarget.classList.toggle('on');
-  const saveBackup = async () => { await api('/api/backup', 'PUT', { baseUrl: $('#bkUrl').value, model: $('#bkModel').value, key: $('#bkKey').value, memory: $('#bkMemory').classList.contains('on'), chat: $('#bkChat').classList.contains('on') }); await refreshState(); fillForms(); };
+  const saveBackup = async () => {
+    const maxTokens = $('#bkMaxTokens').value.trim() === '' ? 2048 : Number($('#bkMaxTokens').value);
+    if (!Number.isInteger(maxTokens) || maxTokens < 256 || maxTokens > 4000) throw new Error('最大输出长度请填 256 到 4000 之间的整数');
+    await api('/api/backup', 'PUT', { maxTokens, baseUrl: $('#bkUrl').value, model: $('#bkModel').value, key: $('#bkKey').value, memory: $('#bkMemory').classList.contains('on'), chat: $('#bkChat').classList.contains('on') }); await refreshState(); fillForms(); };
   $('#bkSave').onclick = async () => { try { await saveBackup(); $('#bkNote').textContent = ''; toast('线路保存好了'); } catch (e) { toast(e.message); } };
   $('#bkTest').onclick = async () => {
     const note = $('#bkNote'); note.className = 'note'; note.textContent = '测试中…';
