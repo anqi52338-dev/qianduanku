@@ -178,6 +178,7 @@ async function renderHome() {
     </div>
     <button class="card cr-home-entry" id="homeReading"><span style="color:var(--gold)"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M12 5v15M12 5C8 2 4 3 2 4v15c4-2 7-1 10 1 3-2 6-3 10-1V4c-2-1-6-2-10 1Z"/></svg></span><span style="flex:1"><strong>我们的共读室</strong><small>翻开一本书，陪你读一段故事</small></span><span style="color:var(--gold)">›</span></button>
     <button class="card cr-home-entry" id="homeLife"><span style="color:var(--gold);font-size:28px">✉</span><span style="flex:1"><strong>我们的生活手账</strong><small>信件、书影、约定，收藏每个小日子</small></span><span style="color:var(--gold)">›</span></button>
+    <button class="card cr-home-entry" id="homeBoard"><span style="color:var(--gold);font-size:28px">⚄</span><span style="flex:1"><strong>我们的情侣大富翁</strong><small>掷骰、收下小屋，陪你走一段小旅程</small></span><span style="color:var(--gold)">›</span></button>
     <div class="card"><h4>他的日记</h4>
       <button class="btn block" id="diaryWrite">让${esc(hisName())}写一篇今天的日记</button>
       <div style="margin-top:6px">${S.diary.length ? S.diary.map((d) => `<div class="entry"><b>${esc(d.title)}</b><p>${esc(d.content)}</p><time>${dayOf(d.ts)} ${hm(d.ts)}</time></div>`).join('') : '<div class="empty">还没有日记。聊几句之后，让他写下今天吧。</div>'}</div>
@@ -317,6 +318,7 @@ function go(page) {
   if (page === 'candy') window.CandyJar?.open();
   if (S.page === 'reading' && page !== 'reading') window.Coread?.leave();
   if (page === 'reading') window.Coread?.open();
+  if (page === 'monopoly') window.CoupleBoard?.open();
   if (page === 'stickers') renderStickers();
   if (page === 'life' || page === 'history') window.Life?.open(page);
   S.page = page;
@@ -330,13 +332,14 @@ function go(page) {
 
 // ===== 事件 =====
 function wire() {
+  window.CoupleBoard?.init({api,toast,profile:()=>S.profile});
   window.CandyJar?.init({ api, toast, go, draft: text => { go('chat'); $('#input').value = text; setComposer(); $('#input').focus(); } });
   $('#openCandy').onclick = () => go('candy');
   window.Life?.init({ api, toast, go, quote: setQuote, draft: text => { go('chat'); $('#input').value = text; setComposer(); $('#input').focus(); }, prefs: p => { S.lifePrefs = p; }, messagesChanged: async retry => { S.msgs = []; await loadMessages(); renderChat(); if (retry) talk({ retry: true }); }, smallNote: text => { go('chat'); talk({ text, smallNote: true }); } });
   $('#quoteCancel').onclick = () => setQuote(null);
   $('#openHistory').onclick = () => go('history'); $('#openLife').onclick = () => go('life');
   $('#openReading').onclick = () => go('reading');
-  $('#homeBody').addEventListener('click', (e) => { if (e.target.closest('#homeReading')) go('reading'); if (e.target.closest('#homeLife')) go('life'); });
+  $('#homeBody').addEventListener('click', (e) => { if (e.target.closest('#homeReading')) go('reading'); if (e.target.closest('#homeLife')) go('life'); if (e.target.closest('#homeBoard')) go('monopoly'); });
   const navLabels = { home: ['home', '主页'], memory: ['star', '记忆'], moments: ['cam', '朋友圈'], settings: ['set', '设置'] };
   document.querySelectorAll('#nav button').forEach((b) => { const k = b.dataset.go; b.innerHTML = k === 'chat' ? icon('heart', 24, true) : icon(navLabels[k][0], 22) + navLabels[k][1]; b.onclick = () => go(k); });
   $('#toolImg').innerHTML = icon('img'); $('#toolEmoji').innerHTML = icon('smile');
