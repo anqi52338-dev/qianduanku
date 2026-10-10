@@ -399,6 +399,45 @@ textarea.field.tall { min-height: 190px; }
       <div class="st-library-grid" id="stkList"></div><p class="note">我的表情可以选入待发送区；他的表情由他自己选择。收起的表情随时能放回来，历史消息仍会保留。</p></div></section>
     <section class="page" data-page="life"><div class="page-head"><em>Little Keepsakes</em><h3>生活手账</h3><div class="flourish"><i></i></div></div><div class="page-body" id="lifeRoot"></div></section>
     <section class="page" data-page="history"><div class="page-head"><em>Our Words</em><h3>往日的话</h3><div class="flourish"><i></i></div></div><div class="page-body" id="historyRoot"></div></section>
+
+    <section class="page" data-page="monopoly">
+      <div class="page-head"><em>Our Board</em><h3>我们的棋盘</h3><div class="flourish"><i></i></div></div>
+      <div class="page-body" id="monoRoot">
+        <div class="card">
+          <h4>涩涩大富翁</h4>
+          <p class="note">双人棋盘游戏。哥哥当荷官也下场玩，你跟他一起掷骰、做任务、抢金币。安全词 404，随时可停。</p>
+          <div id="monoSetup">
+            <label class="label">强度</label>
+            <div class="chips" id="monoFlavor">
+              <button class="chip on" data-f="medium">中 · 到插入</button>
+              <button class="chip" data-f="light">轻 · 调情爱抚</button>
+              <button class="chip" data-f="heavy">重 · 失控层</button>
+            </div>
+            <label class="label" style="margin-top:12px">你的角色</label>
+            <div class="chips" id="monoRole">
+              <button class="chip on" data-r="受">受</button>
+              <button class="chip" data-r="攻">攻</button>
+            </div>
+            <label class="label" style="margin-top:12px">后庭</label>
+            <div class="chips" id="monoAnal">
+              <button class="chip on" data-a="0">默认关</button>
+              <button class="chip" data-a="1">开</button>
+            </div>
+            <button class="btn primary block" id="monoStart" style="margin-top:16px">开始一局</button>
+          </div>
+          <div id="monoPlay" hidden>
+            <pre id="monoBoard" style="white-space:pre-wrap;font-size:13px;line-height:1.45;background:var(--ivory);padding:12px;border-radius:12px;overflow:auto;max-height:220px"></pre>
+            <div id="monoTask" class="note" style="margin:12px 0"></div>
+            <div class="row" style="gap:8px;flex-wrap:wrap">
+              <button class="btn primary" id="monoRoll">掷骰</button>
+              <button class="btn" id="monoRefresh">刷新局面</button>
+              <button class="btn" id="monoToChat">把任务发到聊天</button>
+            </div>
+          </div>
+          <p class="note" id="monoNote" style="margin-top:12px"></p>
+        </div>
+      </div>
+    </section>
     <section class="page" data-page="settings">
       <div class="page-head"><em>Boudoir</em><h3>设置</h3><div class="flourish"><i></i></div></div>
       <div class="page-body">
