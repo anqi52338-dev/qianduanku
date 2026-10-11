@@ -269,9 +269,9 @@ textarea.field.tall { min-height: 190px; }
 .picks { display: flex; gap: 24px; }
 .pick { display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-2); }
 .pick .av { width: 66px; height: 66px; border: 3px double var(--gold); }
-.swatches { display: flex; gap: 12px; }
+.swatches { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 14px 10px; }
 .swatch { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-2); }
-.swatch i { width: 52px; height: 52px; border-radius: 10px; border: 1px solid var(--gold-soft); }
+.swatch i { display:block; width: 100%; height: 76px; border-radius: 10px; border: 1px solid var(--gold-soft); }
 .swatch.on i { box-shadow: 0 0 0 2px var(--ivory), 0 0 0 3px var(--gold); }
 .swatch.on { color: var(--rose-deep); }
 .drop { width: 100%; height: 116px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; border: 1px dashed var(--gold); border-radius: 10px; background: var(--blush); color: var(--rose-deep); font-size: 13px; overflow: hidden; }
@@ -417,6 +417,9 @@ textarea.field.tall { min-height: 190px; }
         <div class="card">
           <h4>聊天背景</h4>
           <div class="swatches" id="swatches"></div>
+          <div class="row" style="margin-top:16px;flex-wrap:wrap"><button type="button" class="btn" id="uploadBg">上传自己的背景</button><button type="button" class="btn" id="removeBg" hidden>删除上传背景</button></div>
+          <input type="file" id="bgFile" accept="image/*" hidden>
+          <p class="note" id="bgNote" role="status" aria-live="polite">点击背景即可保存，也可以上传自己的图片。竖图更适合手机，支持 JPG、PNG、WebP。</p>
         </div>
         <div class="card">
           <h4>他是谁</h4>
@@ -507,6 +510,6 @@ textarea.field.tall { min-height: 190px; }
 <script src="/app/candy.js?v=1"></script>
 <script src="/app/mobile.js?v=1"></script>
 <script src="/app/monopoly.js?v=1"></script>
-<script src="/app/app.js?v=replyformat1"></script>
+<script src="/app/app.js?v=backgrounds1"></script>
 </body>
 </html>

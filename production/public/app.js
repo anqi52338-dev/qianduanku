@@ -1,6 +1,8 @@
 (() => {
 const EMOJIS = ['😊','🥰','😘','🥹','🥺','😌','😏','😴','🐰','🌸','💕','✨','🌙','☕','🍓','🎀','💗','🫧'];
 const BGS = [['damask', '花纹', 'var(--blush) var(--damask)'], ['ivory', '象牙', 'var(--ivory)'], ['rose', '蔷薇', 'linear-gradient(170deg,#fdf3f1,#f7e2e3)'], ['sky', '雾蓝', 'linear-gradient(170deg,#f6f6fb,#e9eef7)']];
+for (const [key,label] of [['cream','奶油粉纸纹'],['letter','淡玫瑰信笺'],['moon','雾蓝月夜'],['sage','鼠尾草小花']]) BGS.push([key,label,`#fffdf9 url(/app/backgrounds/${key}.jpg) center / cover`]);
+let backgroundSaving = false;
 const MODELS = [['default', '跟随订阅默认'], ['opus', 'Opus'], ['sonnet', 'Sonnet'], ['haiku', 'Haiku']];
 const ROSE = `<svg viewBox="0 0 120 120" role="img" aria-label="小花"><circle cx="60" cy="60" r="60" fill="#f1e3bf"/><circle cx="60" cy="60" r="55.500" fill="#fdeeee"/><g fill="#f6c3cd" stroke="#e3a9b5" stroke-width="1.500"><circle cx="60" cy="40" r="15"/><circle cx="79" cy="54" r="15"/><circle cx="72" cy="76" r="15"/><circle cx="48" cy="76" r="15"/><circle cx="41" cy="54" r="15"/></g><circle cx="60" cy="60" r="10" fill="#fff6e6" stroke="#b3935a" stroke-width="1.500"/></svg>`;
 const ICON = {
@@ -290,11 +292,43 @@ function wireStickers() {
 
 
 // ===== 设置 =====
+function applyBackground() {
+  const key=S.profile.bg||'damask',box=$('#msgs');
+  const url=key==='custom'&&S.profile.bgImage?fileUrl(S.profile.bgImage):(['cream','letter','moon','sage'].includes(key)?`/app/backgrounds/${key}.jpg`:'');
+  box.className='msgs bg-'+key;
+  box.style.backgroundImage=url?`url("${url}")`:'';
+  box.style.backgroundSize=url?'cover':'';box.style.backgroundPosition=url?'center':'';
+  const choices=[...BGS];
+  if(S.profile.bgImage)choices.push(['custom','我的背景',`#fffdf9 url(${fileUrl(S.profile.bgImage)}) center / cover`]);
+  $('#swatches').innerHTML=choices.map(([k,label,css])=>`<button type="button" class="swatch ${key===k?'on':''}" data-bg="${k}" aria-pressed="${key===k}" ${backgroundSaving?'disabled':''}><i style="background:${esc(css)}"></i>${label}</button>`).join('');
+  $('#uploadBg').disabled=backgroundSaving;$('#removeBg').disabled=backgroundSaving;$('#removeBg').hidden=!S.profile.bgImage;
+}
+async function saveBackground(patch) {
+  if(backgroundSaving)return;
+  backgroundSaving=true;applyBackground();
+  $('#bgNote').className='note';$('#bgNote').textContent='正在保存背景…';
+  try {
+    const ok=await saveProfile(patch,true);
+    $('#bgNote').className=ok?'note ok':'note err';
+    $('#bgNote').textContent=ok?'背景已保存，刷新后也会保留。':'保存失败，原来的背景仍然保留，请重试。';
+  } finally {backgroundSaving=false;applyBackground();}
+}
+async function uploadBackground(input) {
+  const file=input.files[0];input.value='';if(!file||backgroundSaving)return;
+  if(file.size>20*1024*1024){toast('请选择小于 20MB 的图片');return;}
+  backgroundSaving=true;applyBackground();$('#bgNote').className='note';$('#bgNote').textContent='正在处理图片…';
+  let image;
+  try {image=await shrink(file,1800,3200000);if(image.length>3200000)throw new Error('large');}
+  catch {$('#bgNote').className='note err';$('#bgNote').textContent='这张图片无法处理，请试试 JPG、PNG 或 WebP 图片。';}
+  finally {backgroundSaving=false;applyBackground();}
+  if(image)await saveBackground({bgImage:image,bg:'custom'});
+}
+
 function applyState() {
   $('#topAv').innerHTML = avatar('him'); $('#topName').textContent = hisName(); $('#coverSub').textContent = hisName() + '在等你';
-  $('#msgs').className = 'msgs bg-' + (S.profile.bg || 'damask');
+  applyBackground();
   $('#setMeAv').innerHTML = avatar('me'); $('#setHimAv').innerHTML = avatar('him'); $('#setBunny').innerHTML = Bunny.avatar();
-  $('#swatches').innerHTML = BGS.map(([k, label, css]) => `<button class="swatch ${S.profile.bg === k ? 'on' : ''}" data-bg="${k}"><i style="background:${css}"></i>${label}</button>`).join('');
+
   $('#models').innerHTML = MODELS.map(([k, label]) => `<button class="chip ${(S.profile.model || 'default') === k ? 'on' : ''}" data-model="${k}">${label}</button>`).join('');
   $('#claudeNote').textContent = S.claude.lastError === 'needs_login' ? '服务器上的 Claude 还没有登录订阅账号，登录后他才能回你。' : (S.claude.running ? '他醒着，用的是你的 Claude 订阅。' : '他会在你发下一句话时醒来，用的是你的 Claude 订阅。');
   $('#claudeNote').className = 'note' + (S.claude.lastError === 'needs_login' ? ' err' : '');
@@ -404,7 +438,10 @@ function wire() {
   pick($('#fileMe'), 240, 80000, (d) => saveProfile({ myAv: d }));
   pick($('#fileHim'), 240, 80000, (d) => saveProfile({ hisAv: d }));
   $('#resetHim').onclick = () => saveProfile({ hisAv: '' });
-  $('#swatches').onclick = (e) => { const b = e.target.closest('[data-bg]'); if (b) saveProfile({ bg: b.dataset.bg }, true); };
+  $('#swatches').onclick = (e) => { const b=e.target.closest('[data-bg]');if(b&&!backgroundSaving)saveBackground({bg:b.dataset.bg}); };
+  $('#uploadBg').onclick=()=>$('#bgFile').click();
+  $('#bgFile').onchange=e=>uploadBackground(e.currentTarget);
+  $('#removeBg').onclick=()=>saveBackground({bgImage:'',bg:S.profile.bg==='custom'?'damask':S.profile.bg});
   $('#models').onclick = (e) => { const b = e.target.closest('[data-model]'); if (b) saveProfile({ model: b.dataset.model }, true); };
   $('#persona').oninput = () => { personaDirty = true; $('#personaNote').className = 'note'; $('#personaNote').textContent = '有修改，记得保存'; };
   $('#savePersona').onclick = async (e) => {
