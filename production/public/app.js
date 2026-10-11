@@ -87,7 +87,7 @@ function renderChat(keepScroll) {
       const day = dayOf(m.ts);
       if (day !== lastDay) { html += `<div class="day">${day}</div>`; lastDay = day; }
       const who = m.role === 'me' ? 'me' : 'him';
-      const parts = m.type === 'sticker' ? [] : who === 'him' ? displayReplyText(m.text).split(/\n{2,}/).filter((p) => p.trim()) : (m.text ? [m.text] : []);
+      const parts = m.type === 'sticker' ? [] : who === 'him' ? window.splitChatReply(displayReplyText(m.text)) : (m.text ? [m.text] : []);
       const src = m.localImage || (m.image ? fileUrl(m.image) : m.recovered_sticker?.image ? fileUrl(m.recovered_sticker.image) : '');
       html += `<div class="msg ${who}" data-message="${esc(m.id)}"><span class="av">${avatar(who)}</span><div class="col">${src ? `<img class="${m.type==='sticker'||m.recovered_sticker?'sticker-img':'pic'}" src="${esc(src)}" alt="${m.type==='sticker'||m.recovered_sticker?'表情':'图片'}" loading="lazy">` : ''}${m.quote_text ? `<div class="msg-quote">${esc(m.quote_role === 'me' ? '我' : hisName())}：${esc(m.quote_text)}</div>` : ''}${parts.map((p) => `<div class="bubble">${rich(p.trim())}</div>`).join('')}${who === 'him' && m.type !== 'sticker' && m.text?.trim() && typeof m.id === 'number' ? `<button type="button" class="voice-play" data-voice="${m.id}" aria-label="朗读这条回复">▷ 听这句</button>` : ''}${typeof m.id === 'number' ? `<div class="message-actions"><button data-quote="${m.id}">引用</button><button data-collect="${m.id}">收藏</button><button data-more="${m.id}" aria-label="消息操作">···</button></div>` : ''}<time>${hm(m.ts)}${m.src === 'backup' ? ' · 备用线路' : ''}</time></div></div>`;
     }
