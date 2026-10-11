@@ -302,16 +302,17 @@ function applyState() {
   $('#storeInfo').textContent = `聊天记录、记忆、日记和朋友圈都保存在你自己的服务器上，每天自动备份一份。目前共 ${S.counts.messages} 条消息。`;
   $('#memNote').textContent = S.counts.pending > 2 ? `还有 ${S.counts.pending} 条新对话没整理进记忆，满 60 条会自动整理。` : '最近的事他都还记着。';
 }
+let personaDirty = false;
 function fillForms() {
   fillVoice();
   $('#emotionEnabled').checked = !!S.profile.emotionEnabled; $('#emotionRules').value = S.profile.emotionRules || '';
-  $('#hisName').value = hisName(); $('#persona').value = S.profile.persona || ''; $('#memText').value = S.memory || '';
+  $('#hisName').value = hisName(); if (!personaDirty) $('#persona').value = S.profile.persona || ''; $('#memText').value = S.memory || '';
   $('#bkUrl').value = S.backup.baseUrl || ''; $('#bkModel').value = S.backup.model || ''; $('#bkKey').value = '';
   $('#bkMaxTokens').value = S.backup.maxTokens || 2048;
   $('#bkKey').placeholder = S.backup.hasKey ? '已保存，留空则不改' : 'sk-...';
 }
 async function refreshState() { const st = await api('/api/state'); Object.assign(S, { lifePrefs: st.lifePrefs || {}, voice: st.voice || {}, profile: st.profile, memory: st.memory, backup: st.backup, counts: st.counts, since: st.since, claude: st.claude }); applyState(); return st; }
-async function saveProfile(patch, quiet) { try { S.profile = (await api('/api/profile', 'PUT', patch)).profile; applyState(); renderChat(); if (!quiet) toast('保存好了'); } catch (e) { toast(e.message); } }
+async function saveProfile(patch, quiet) { try { S.profile = (await api('/api/profile', 'PUT', patch)).profile; if (Object.hasOwn(patch, 'persona')) personaDirty = $('#persona').value !== patch.persona; applyState(); renderChat(); if (!quiet) toast('保存好了'); return true; } catch (e) { toast(e.message); return false; } }
 
 function go(page) {
   if (S.page === 'candy' && page !== 'candy') window.CandyJar?.leave();
@@ -405,7 +406,16 @@ function wire() {
   $('#resetHim').onclick = () => saveProfile({ hisAv: '' });
   $('#swatches').onclick = (e) => { const b = e.target.closest('[data-bg]'); if (b) saveProfile({ bg: b.dataset.bg }, true); };
   $('#models').onclick = (e) => { const b = e.target.closest('[data-model]'); if (b) saveProfile({ model: b.dataset.model }, true); };
-  $('#saveSettings').onclick = async () => { await saveProfile({ hisName: $('#hisName').value, persona: $('#persona').value, emotionEnabled: $('#emotionEnabled').checked, emotionRules: $('#emotionRules').value }); go('chat'); };
+  $('#persona').oninput = () => { personaDirty = true; $('#personaNote').className = 'note'; $('#personaNote').textContent = '有修改，记得保存'; };
+  $('#savePersona').onclick = async (e) => {
+    const btn = e.currentTarget, note = $('#personaNote'); btn.disabled = true; note.className = 'note'; note.textContent = '正在保存…';
+    try {
+      const saved = await saveProfile({ persona: $('#persona').value }, true);
+      note.className = saved ? 'note ok' : 'note err';
+      note.textContent = saved ? (personaDirty ? '已保存；你刚刚的新修改还需要再保存一次' : '人设已保存，下一次回复开始使用') : '保存失败，内容还在，请重试';
+    } finally { btn.disabled = false; }
+  };
+  $('#saveSettings').onclick = async (e) => { const btn = e.currentTarget; btn.disabled = true; try { if (await saveProfile({ hisName: $('#hisName').value, persona: $('#persona').value, emotionEnabled: $('#emotionEnabled').checked, emotionRules: $('#emotionRules').value })) go('chat'); } finally { btn.disabled = false; } };
 
   wireBackupModels();
   $('#bkMemory').onclick = (e) => e.currentTarget.classList.toggle('on');
