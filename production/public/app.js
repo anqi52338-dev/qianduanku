@@ -3,6 +3,7 @@ const EMOJIS = ['😊','🥰','😘','🥹','🥺','😌','😏','😴','🐰','
 const BGS = [['damask', '花纹', 'var(--blush) var(--damask)'], ['ivory', '象牙', 'var(--ivory)'], ['rose', '蔷薇', 'linear-gradient(170deg,#fdf3f1,#f7e2e3)'], ['sky', '雾蓝', 'linear-gradient(170deg,#f6f6fb,#e9eef7)']];
 for (const [key,label] of [['cream','奶油粉纸纹'],['letter','淡玫瑰信笺'],['moon','雾蓝月夜'],['sage','鼠尾草小花']]) BGS.push([key,label,`#fffdf9 url(/app/backgrounds/${key}.jpg) center / cover`]);
 let backgroundSaving = false;
+const routeDirty={bk:false,bk2:false};
 const MODELS = [['default', '跟随订阅默认'], ['opus', 'Opus'], ['sonnet', 'Sonnet'], ['haiku', 'Haiku']];
 const ROSE = `<svg viewBox="0 0 120 120" role="img" aria-label="小花"><circle cx="60" cy="60" r="60" fill="#f1e3bf"/><circle cx="60" cy="60" r="55.500" fill="#fdeeee"/><g fill="#f6c3cd" stroke="#e3a9b5" stroke-width="1.500"><circle cx="60" cy="40" r="15"/><circle cx="79" cy="54" r="15"/><circle cx="72" cy="76" r="15"/><circle cx="48" cy="76" r="15"/><circle cx="41" cy="54" r="15"/></g><circle cx="60" cy="60" r="10" fill="#fff6e6" stroke="#b3935a" stroke-width="1.500"/></svg>`;
 const ICON = {
@@ -89,7 +90,7 @@ function renderChat(keepScroll) {
       const who = m.role === 'me' ? 'me' : 'him';
       const parts = m.type === 'sticker' ? [] : who === 'him' ? window.splitChatReply(displayReplyText(m.text)) : (m.text ? [m.text] : []);
       const src = m.localImage || (m.image ? fileUrl(m.image) : m.recovered_sticker?.image ? fileUrl(m.recovered_sticker.image) : '');
-      html += `<div class="msg ${who}" data-message="${esc(m.id)}"><span class="av">${avatar(who)}</span><div class="col">${src ? `<img class="${m.type==='sticker'||m.recovered_sticker?'sticker-img':'pic'}" src="${esc(src)}" alt="${m.type==='sticker'||m.recovered_sticker?'表情':'图片'}" loading="lazy">` : ''}${m.quote_text ? `<div class="msg-quote">${esc(m.quote_role === 'me' ? '我' : hisName())}：${esc(m.quote_text)}</div>` : ''}${parts.map((p) => `<div class="bubble">${rich(p.trim())}</div>`).join('')}${who === 'him' && m.type !== 'sticker' && m.text?.trim() && typeof m.id === 'number' ? `<button type="button" class="voice-play" data-voice="${m.id}" aria-label="朗读这条回复">▷ 听这句</button>` : ''}${typeof m.id === 'number' ? `<div class="message-actions"><button data-quote="${m.id}">引用</button><button data-collect="${m.id}">收藏</button><button data-more="${m.id}" aria-label="消息操作">···</button></div>` : ''}<time>${hm(m.ts)}${m.src === 'backup' ? ' · 备用线路' : ''}</time></div></div>`;
+      html += `<div class="msg ${who}" data-message="${esc(m.id)}"><span class="av">${avatar(who)}</span><div class="col">${src ? `<img class="${m.type==='sticker'||m.recovered_sticker?'sticker-img':'pic'}" src="${esc(src)}" alt="${m.type==='sticker'||m.recovered_sticker?'表情':'图片'}" loading="lazy">` : ''}${m.quote_text ? `<div class="msg-quote">${esc(m.quote_role === 'me' ? '我' : hisName())}：${esc(m.quote_text)}</div>` : ''}${parts.map((p) => `<div class="bubble">${rich(p.trim())}</div>`).join('')}${who === 'him' && m.type !== 'sticker' && m.text?.trim() && typeof m.id === 'number' ? `<button type="button" class="voice-play" data-voice="${m.id}" aria-label="朗读这条回复">▷ 听这句</button>` : ''}${typeof m.id === 'number' ? `<div class="message-actions"><button data-quote="${m.id}">引用</button><button data-collect="${m.id}">收藏</button><button data-more="${m.id}" aria-label="消息操作">···</button></div>` : ''}<time>${hm(m.ts)}${m.src === 'backup2' ? ' · 备用线路 2' : m.src === 'backup' ? ' · 备用线路 1' : ''}</time></div></div>`;
     }
     if (!S.busy && S.msgs[S.msgs.length - 1].role === 'me') html += '<button class="retry" id="retry">再叫他一声</button>';
     box.innerHTML = html;
@@ -332,7 +333,9 @@ function applyState() {
   $('#models').innerHTML = MODELS.map(([k, label]) => `<button class="chip ${(S.profile.model || 'default') === k ? 'on' : ''}" data-model="${k}">${label}</button>`).join('');
   $('#claudeNote').textContent = S.claude.lastError === 'needs_login' ? '服务器上的 Claude 还没有登录订阅账号，登录后他才能回你。' : (S.claude.running ? '他醒着，用的是你的 Claude 订阅。' : '他会在你发下一句话时醒来，用的是你的 Claude 订阅。');
   $('#claudeNote').className = 'note' + (S.claude.lastError === 'needs_login' ? ' err' : '');
-  $('#bkMemory').classList.toggle('on', !!S.backup.memory); $('#bkChat').classList.toggle('on', !!S.backup.chat);
+  for(const [prefix,key]of [['bk','backup'],['bk2','backup2']])if(!routeDirty[prefix])$('#'+prefix+'Memory').classList.toggle('on',!!S[key]?.memory);
+  document.querySelectorAll('[data-chat-route]').forEach(b=>{const on=b.dataset.chatRoute===(S.chatRoute||(S.backup.chat?'backup':'subscription'));b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on));});
+  window.PhonePresence?.update(S.presence);
   $('#storeInfo').textContent = `聊天记录、记忆、日记和朋友圈都保存在你自己的服务器上，每天自动备份一份。目前共 ${S.counts.messages} 条消息。`;
   $('#memNote').textContent = S.counts.pending > 2 ? `还有 ${S.counts.pending} 条新对话没整理进记忆，满 60 条会自动整理。` : '最近的事他都还记着。';
 }
@@ -341,11 +344,15 @@ function fillForms() {
   fillVoice();
   $('#emotionEnabled').checked = !!S.profile.emotionEnabled; $('#emotionRules').value = S.profile.emotionRules || '';
   $('#hisName').value = hisName(); if (!personaDirty) $('#persona').value = S.profile.persona || ''; $('#memText').value = S.memory || '';
-  $('#bkUrl').value = S.backup.baseUrl || ''; $('#bkModel').value = S.backup.model || ''; $('#bkKey').value = '';
-  $('#bkMaxTokens').value = S.backup.maxTokens || 2048;
-  $('#bkKey').placeholder = S.backup.hasKey ? '已保存，留空则不改' : 'sk-...';
+  for(const [prefix,key]of [['bk','backup'],['bk2','backup2']]) {
+    if(routeDirty[prefix])continue;const config=S[key]||{};
+    $('#'+prefix+'Url').value=config.baseUrl||'';$('#'+prefix+'Model').value=config.model||'';
+    $('#'+prefix+'Key').value='';$('#'+prefix+'Key').placeholder=config.hasKey?'已保存，留空则不改':'sk-...';
+    $('#'+prefix+'MaxTokens').value=config.maxTokens||2048;
+  }
+  window.PhonePresence?.fill();
 }
-async function refreshState() { const st = await api('/api/state'); Object.assign(S, { lifePrefs: st.lifePrefs || {}, voice: st.voice || {}, profile: st.profile, memory: st.memory, backup: st.backup, counts: st.counts, since: st.since, claude: st.claude }); applyState(); return st; }
+async function refreshState() { const st = await api('/api/state'); Object.assign(S, { lifePrefs: st.lifePrefs || {}, voice: st.voice || {}, profile: st.profile, memory: st.memory, backup: st.backup,backup2:st.backup2||{},chatRoute:st.chatRoute,presence:st.presence, counts: st.counts, since: st.since, claude: st.claude }); applyState(); return st; }
 async function saveProfile(patch, quiet) { try { S.profile = (await api('/api/profile', 'PUT', patch)).profile; if (Object.hasOwn(patch, 'persona')) personaDirty = $('#persona').value !== patch.persona; applyState(); renderChat(); if (!quiet) toast('保存好了'); return true; } catch (e) { toast(e.message); return false; } }
 
 function go(page) {
@@ -454,31 +461,32 @@ function wire() {
   };
   $('#saveSettings').onclick = async (e) => { const btn = e.currentTarget; btn.disabled = true; try { if (await saveProfile({ hisName: $('#hisName').value, persona: $('#persona').value, emotionEnabled: $('#emotionEnabled').checked, emotionRules: $('#emotionRules').value })) go('chat'); } finally { btn.disabled = false; } };
 
-  wireBackupModels();
-  $('#bkMemory').onclick = (e) => e.currentTarget.classList.toggle('on');
-  $('#bkChat').onclick = (e) => e.currentTarget.classList.toggle('on');
-  const saveBackup = async () => {
-    const maxTokens = $('#bkMaxTokens').value.trim() === '' ? 2048 : Number($('#bkMaxTokens').value);
-    if (!Number.isInteger(maxTokens) || maxTokens < 256 || maxTokens > 4000) throw new Error('最大输出长度请填 256 到 4000 之间的整数');
-    await api('/api/backup', 'PUT', { maxTokens, baseUrl: $('#bkUrl').value, model: $('#bkModel').value, key: $('#bkKey').value, memory: $('#bkMemory').classList.contains('on'), chat: $('#bkChat').classList.contains('on') }); await refreshState(); fillForms(); };
-  $('#bkSave').onclick = async () => { try { await saveBackup(); $('#bkNote').textContent = ''; toast('线路保存好了'); } catch (e) { toast(e.message); } };
-  $('#bkTest').onclick = async () => {
-    const note = $('#bkNote'); note.className = 'note'; note.textContent = '测试中…';
-    try { await saveBackup(); const r = await api('/api/backup/test', 'POST'); note.className = 'note ok'; note.textContent = '连上了，它回了：' + r.text; } catch (e) { note.className = 'note err'; note.textContent = '没连上：' + e.message; }
-  };
+  window.PhonePresence?.init({api,toast});
+  for(const [prefix,key]of [['bk','backup'],['bk2','backup2']]) {
+    const get=id=>$('#'+prefix+id),endpoint='/api/'+key;
+    wireBackupModels(prefix,endpoint,()=>S[key]||{});
+    $('#'+prefix+'Card').addEventListener('input',()=>routeDirty[prefix]=true);
+    $('#'+prefix+'Card').addEventListener('change',()=>routeDirty[prefix]=true);
+    get('Memory').onclick=e=>{e.currentTarget.classList.toggle('on');routeDirty[prefix]=true;};
+    const save=async()=>{const maxTokens=get('MaxTokens').value.trim()===''?2048:Number(get('MaxTokens').value);if(!Number.isInteger(maxTokens)||maxTokens<256||maxTokens>4000)throw new Error('最大输出长度请填 256 到 4000 之间的整数');await api(endpoint,'PUT',{baseUrl:get('Url').value,model:get('Model').value,key:get('Key').value,maxTokens,memory:get('Memory').classList.contains('on')});routeDirty[prefix]=false;await refreshState();fillForms();};
+    get('Save').onclick=async e=>{const b=e.currentTarget;b.disabled=true;try{await save();get('Note').textContent='线路已保存，点击上方线路开关即可使用。';toast('线路保存好了');}catch(err){get('Note').textContent=err.message;get('Note').className='note err';}finally{b.disabled=false;}};
+    get('Test').onclick=async e=>{const b=e.currentTarget,n=get('Note');b.disabled=true;n.className='note';n.textContent='测试中…';try{await save();const r=await api(endpoint+'/test','POST',{});n.className='note ok';n.textContent='连上了，它回了：'+r.text;}catch(err){n.className='note err';n.textContent='没连上：'+err.message;}finally{b.disabled=false;}};
+  }
+  $('#chatRoutes').onclick=async e=>{const b=e.target.closest('[data-chat-route]');if(!b)return;const buttons=[...$('#chatRoutes').querySelectorAll('button')];buttons.forEach(b=>b.disabled=true);try{await api('/api/chat-route','PUT',{route:b.dataset.chatRoute});await refreshState();toast('聊天线路已切换，下一次回复开始使用');}catch(err){toast(err.message);}finally{buttons.forEach(b=>b.disabled=false);}};
 
   wireVoice();
   wireStickers();
 }
 
 // ===== 备用线路模型选择 =====
-function wireBackupModels() {
+function wireBackupModels(prefix='bk',endpoint='/api/backup',getConfig=()=>S.backup) {
+  const $=selector=>document.querySelector(selector.replace(/^#bk/,'#'+prefix));
   const url = $('#bkUrl'), key = $('#bkKey'), model = $('#bkModel');
   const button = $('#bkFetchModels'), picker = $('#bkModelPicker'), search = $('#bkModelSearch'), select = $('#bkSelect'), note = $('#bkModelsNote');
   let models = [], revision = 0, timer;
   const base = value => value.trim().replace(/\/+$/, '');
   const signature = () => url.value.trim() + '\n' + key.value.trim();
-  const ready = () => base(url.value) && (key.value.trim() || (S.backup.hasKey && base(url.value) === base(S.backup.baseUrl || '')));
+  const ready = () => base(url.value) && (key.value.trim() || (getConfig().hasKey && base(url.value) === base(getConfig().baseUrl || '')));
   const render = () => {
     const term = search.value.trim().toLowerCase();
     const filtered = models.filter(m => (m.id + ' ' + m.name).toLowerCase().includes(term));
@@ -498,7 +506,7 @@ function wireBackupModels() {
     const ticket = ++revision, original = signature();
     button.disabled = true; button.textContent = '获取中…'; note.className = 'note'; note.textContent = '正在获取可用模型…';
     try {
-      const result = await api('/api/backup/models', 'POST', { baseUrl: url.value.trim(), key: key.value.trim() });
+      const result = await api(endpoint+'/models', 'POST', { baseUrl: url.value.trim(), key: key.value.trim() });
       if (ticket !== revision || original !== signature()) return;
       models = result.models; search.value = ''; picker.hidden = false; render();
     } catch (e) {
@@ -556,6 +564,21 @@ function wireVoice() {
   $('#voiceClear').onclick = async (e) => { const b = e.currentTarget; b.disabled = true; try { const r = await api('/api/voice', 'PUT', { clearKey: true }); S.voice = r.voice; fillVoice(); $('#voiceNote').className = 'note'; $('#voiceNote').textContent = '密钥已移除，重新填入后可以继续生成语音。'; } catch (err) { toast(err.message); } finally { b.disabled = false; } };
 }
 
+// Poll only while visible. The server generates proactive messages even when this page is closed.
+let incomingStarted=false,incomingPolling=false;
+function startIncoming(){
+  if(incomingStarted)return;incomingStarted=true;
+  const poll=async()=>{
+    if(document.hidden||S.busy||incomingPolling)return;incomingPolling=true;
+    try{const data=await api('/api/messages?limit=60');if(S.busy)return;
+      if(data.busy){watchBusy();return;}
+      const first=data.messages[0]?.id??Infinity,previous=S.msgs.at(-1)?.id;
+      S.msgs=mergeMessages(S.msgs.filter(m=>typeof m.id==='number'&&m.id<first),data.messages);
+      if(previous!==S.msgs.at(-1)?.id){const box=$('#msgs'),top=box.scrollTop,near=box.scrollHeight-top-box.clientHeight<100;renderChat();if(!near)box.scrollTop=top;}
+    }catch{}finally{incomingPolling=false;}
+  };
+  setInterval(poll,20000);document.addEventListener('visibilitychange',poll);
+}
 // ===== 进门 =====
 async function boot() {
   const [st, , stickers] = await Promise.all([refreshState(), loadMessages(), api('/api/stickers')]);
@@ -565,6 +588,8 @@ async function boot() {
   btn.onclick = () => { $('#cover').classList.add('gone'); const box = $('#msgs'); box.scrollTop = box.scrollHeight; };
   $('#coverFoot').textContent = S.counts.messages ? `已经说了 ${S.counts.messages} 句话` : 'est. ' + new Date().getFullYear();
   window.Life?.start();
+  window.PhonePresence?.start();
+  startIncoming();
   if (st.busy) watchBusy();
 }
 async function gate() {

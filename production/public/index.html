@@ -83,6 +83,8 @@ svg { display: block; }
 }
 .page-body, #msgs, .cr-content { overscroll-behavior: contain; }
 
+.presence-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px; }
+#presenceCard .btn {white-space:normal;}
 /* ===== 装饰件 ===== */
 .corners { pointer-events: none; }
 .corners i { position: absolute; width: 46px; height: 46px; background: var(--corner) no-repeat; pointer-events: none; }
@@ -321,6 +323,7 @@ textarea.field.tall { min-height: 190px; }
   </header>
 
   <div class="stage">
+    <div id="chatClock" class="note" style="text-align:center;flex-shrink:0;padding:5px 12px;background:var(--ivory)" aria-label="当前当地时间"></div>
     <div class="msgs" id="msgs"></div>
     <div class="composer">
       <div class="voice-player" id="voicePanel" hidden>
@@ -457,8 +460,9 @@ textarea.field.tall { min-height: 190px; }
           <p class="note" id="voiceNote" role="status" aria-live="polite"></p>
           <button class="btn" id="voiceClear">移除保存的密钥</button>
         </div>
-        <div class="card">
-          <h4>备用线路</h4>
+        <div class="card"><h4>当前聊天线路</h4><div class="chips" id="chatRoutes" aria-label="选择聊天线路"><button type="button" class="chip" data-chat-route="subscription">Claude 订阅</button><button type="button" class="chip" data-chat-route="backup">备用线路 1</button><button type="button" class="chip" data-chat-route="backup2">备用线路 2</button></div><p class="note">两条备用线路分别保存地址、Key 和模型；先保存，再点击这里切换。测试不会切换聊天线路。</p></div>
+        <div class="card" id="bkCard">
+          <h4>备用线路 1</h4>
           <p class="note">接入 OpenAI 兼容的 API。填好地址和 Key 后会自动获取模型，选择喜欢的模型，再保存线路。</p>
           <label class="label" for="bkUrl">API 地址</label>
           <input class="field" id="bkUrl" type="text" autocomplete="off" placeholder="https://api.deepseek.com/v1">
@@ -475,9 +479,49 @@ textarea.field.tall { min-height: 190px; }
           <label class="label" for="bkMaxTokens">最大输出长度</label>
           <input class="field" id="bkMaxTokens" type="number" inputmode="numeric" min="256" max="4000" step="1" value="2048" placeholder="默认 2048">
           <p class="note">默认 2048，最多 4000 tokens。这是单次回复的上限，不是每次都会用满；思考模型的思考过程也可能占用额度。</p>
-          <div class="chips" style="margin-top:14px"><button class="chip" id="bkMemory">用它整理记忆</button><button class="chip" id="bkChat">平时也用它聊天</button></div>
+          <div class="chips" style="margin-top:14px"><button class="chip" id="bkMemory">用它整理记忆</button></div>
           <div class="note" id="bkNote" style="margin-top:10px"></div>
           <div class="row between"><button class="btn" id="bkTest">测试</button><button class="btn primary" id="bkSave">保存线路</button></div>
+        </div>
+        <div class="card" id="bk2Card">
+          <h4>备用线路 2</h4>
+          <p class="note">接入 OpenAI 兼容的 API。填好地址和 Key 后会自动获取模型，选择喜欢的模型，再保存线路。</p>
+          <label class="label" for="bk2Url">API 地址</label>
+          <input class="field" id="bk2Url" type="text" autocomplete="off" placeholder="https://api.deepseek.com/v1">
+          <label class="label" for="bk2Key">API Key</label>
+          <input class="field" id="bk2Key" type="password" autocomplete="off" placeholder="sk-...">
+          <div class="row between" style="margin-top:14px"><label class="label" for="bk2Select" style="margin:0">选择模型</label><button class="btn" id="bk2FetchModels" type="button">获取模型</button></div>
+          <div id="bk2ModelPicker" hidden style="margin-top:10px">
+            <input class="field" id="bk2ModelSearch" type="search" autocomplete="off" placeholder="搜索模型，比如 Claude、Sonnet" aria-label="搜索模型">
+            <select class="field" id="bk2Select" style="margin-top:8px" aria-label="选择模型"></select>
+          </div>
+          <p class="note" id="bk2ModelsNote" role="status" aria-live="polite">也可以点击获取模型；接口不提供列表时，手动填写即可。</p>
+          <label class="label" for="bk2Model">模型名称 · 可手动填写</label>
+          <input class="field" id="bk2Model" type="text" autocomplete="off" placeholder="选择上面的模型，或输入模型 ID">
+          <label class="label" for="bk2MaxTokens">最大输出长度</label>
+          <input class="field" id="bk2MaxTokens" type="number" inputmode="numeric" min="256" max="4000" step="1" value="2048" placeholder="默认 2048">
+          <p class="note">默认 2048，最多 4000 tokens。这是单次回复的上限，不是每次都会用满；思考模型的思考过程也可能占用额度。</p>
+          <div class="chips" style="margin-top:14px"><button class="chip" id="bk2Memory">用它整理记忆</button></div>
+          <div class="note" id="bk2Note" style="margin-top:10px"></div>
+          <div class="row between"><button class="btn" id="bk2Test">测试</button><button class="btn primary" id="bk2Save">保存线路</button></div>
+        </div>
+        <div class="card" id="presenceCard">
+          <h4>时间、天气与主动消息</h4>
+          <label class="label" for="timeZone">聊天时区</label><input class="field" id="timeZone" value="Asia/Shanghai" placeholder="Asia/Shanghai">
+          <p class="note">每次回复都会带上当前年月日、星期和时间，历史消息也会标注时间。</p>
+          <label class="label"><input type="checkbox" id="weatherEnabled"> 让他知道当地天气</label>
+          <p class="note" id="locationNow"></p><p class="note" id="weatherNow" role="status"></p>
+          <div class="row" style="flex-wrap:wrap"><button type="button" class="btn" id="locateWeather">使用手机定位</button><button type="button" class="btn" id="refreshWeather">刷新天气</button></div>
+          <label class="label" for="weatherCity">也可以手动选城市 · 默认乐陵</label>
+          <div class="row"><input class="field" style="min-width:0" id="weatherCity" placeholder="城市名，例如乐陵"><button type="button" class="btn" id="searchCity">查找</button></div>
+          <select class="field" id="cityResults" aria-label="城市搜索结果" hidden></select>
+          <p class="note">定位由手机授权，只保存约一公里精度的地区坐标，用于向天气服务查询天气。<a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">天气数据：Open-Meteo</a></p>
+          <label class="label"><input type="checkbox" id="autoEnabled"> 开启主动消息</label>
+          <label class="label"><input type="checkbox" id="autoAllDay"> 全天可发</label>
+          <div id="autoHours" class="presence-grid" hidden><label class="label">开始小时<input class="field" id="autoStart" type="number" min="0" max="23" value="9"></label><label class="label">结束小时<input class="field" id="autoEnd" type="number" min="1" max="24" value="22"></label></div>
+          <div class="presence-grid"><label class="label">每天最多尝试<input class="field" id="autoLimit" type="number" min="1" max="10" value="10"></label><label class="label">你空闲多久后 · 分钟<input class="field" id="autoIdle" type="number" min="15" max="1440" value="60"></label><label class="label">主动消息最小间隔 · 分钟<input class="field" id="autoGap" type="number" min="30" max="1440" value="120"></label></div>
+          <p class="note" id="proactiveUsage"></p><p class="note">使用当前聊天线路，会消耗模型额度。网页关闭后服务器仍会生成并保存消息；重新打开即可看到，不会弹出 iPhone 锁屏通知。模拟拉黑期间暂停。</p>
+          <button type="button" class="btn primary" id="presenceSave">保存时间、天气和主动消息设置</button><p class="note" id="presenceNote" role="status" aria-live="polite"></p>
         </div>
         <div class="card">
           <h4>保存位置</h4>
@@ -511,6 +555,7 @@ textarea.field.tall { min-height: 190px; }
 <script src="/app/mobile.js?v=1"></script>
 <script src="/app/monopoly.js?v=1"></script>
 <script src="/app/reply-bubbles.js?v=1"></script>
-<script src="/app/app.js?v=bubbles1"></script>
+<script src="/app/presence.js?v=1"></script>
+<script src="/app/app.js?v=presence1"></script>
 </body>
 </html>
