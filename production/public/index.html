@@ -520,7 +520,7 @@ textarea.field.tall { min-height: 190px; }
           <label class="label"><input type="checkbox" id="autoAllDay"> 全天可发</label>
           <div id="autoHours" class="presence-grid" hidden><label class="label">开始小时<input class="field" id="autoStart" type="number" min="0" max="23" value="9"></label><label class="label">结束小时<input class="field" id="autoEnd" type="number" min="1" max="24" value="22"></label></div>
           <div class="presence-grid"><label class="label">每天最多尝试<input class="field" id="autoLimit" type="number" min="1" max="10" value="10"></label><label class="label">你空闲多久后 · 分钟<input class="field" id="autoIdle" type="number" min="15" max="1440" value="60"></label><label class="label">主动消息最小间隔 · 分钟<input class="field" id="autoGap" type="number" min="30" max="1440" value="120"></label></div>
-          <p class="note" id="proactiveUsage"></p><p class="note">使用当前聊天线路，会消耗模型额度。网页关闭后服务器仍会生成并保存消息；重新打开即可看到，不会弹出 iPhone 锁屏通知。模拟拉黑期间暂停。</p>
+          <p class="note" id="proactiveUsage"></p><p class="note">使用当前聊天线路，会消耗模型额度。主动消息的天气资料最多每 6 小时更新一次，其余主动消息不查天气，优先接着最近的聊天说。网页关闭后服务器仍会生成并保存消息；重新打开即可看到，不会弹出 iPhone 锁屏通知。模拟拉黑期间暂停。</p>
           <button type="button" class="btn primary" id="presenceSave">保存时间、天气和主动消息设置</button><p class="note" id="presenceNote" role="status" aria-live="polite"></p>
         </div>
         <div class="card">
