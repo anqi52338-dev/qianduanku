@@ -460,7 +460,7 @@ textarea.field.tall { min-height: 190px; }
           <p class="note" id="voiceNote" role="status" aria-live="polite"></p>
           <button class="btn" id="voiceClear">移除保存的密钥</button>
         </div>
-        <div class="card"><h4>当前聊天线路</h4><div class="chips" id="chatRoutes" aria-label="选择聊天线路"><button type="button" class="chip" data-chat-route="subscription">Claude 订阅</button><button type="button" class="chip" data-chat-route="backup">备用线路 1</button><button type="button" class="chip" data-chat-route="backup2">备用线路 2</button></div><p class="note">两条备用线路分别保存地址、Key 和模型；先保存，再点击这里切换。测试不会切换聊天线路。</p></div>
+        <div class="card"><h4>当前聊天线路</h4><div class="chips" id="chatRoutes" aria-label="选择聊天线路"><button type="button" class="chip" data-chat-route="subscription">Claude 订阅</button><button type="button" class="chip" data-chat-route="backup">备用线路 1</button><button type="button" class="chip" data-chat-route="backup2">备用线路 2</button><button type="button" class="chip" data-chat-route="backup3">备用线路 3</button></div><p class="note">三条备用线路分别保存地址、Key 和模型；先保存，再点击这里切换。测试不会切换聊天线路。</p></div>
         <div class="card" id="bkCard">
           <h4>备用线路 1</h4>
           <p class="note">接入 OpenAI 兼容的 API。填好地址和 Key 后会自动获取模型，选择喜欢的模型，再保存线路。</p>
@@ -504,6 +504,28 @@ textarea.field.tall { min-height: 190px; }
           <div class="chips" style="margin-top:14px"><button class="chip" id="bk2Memory">用它整理记忆</button></div>
           <div class="note" id="bk2Note" style="margin-top:10px"></div>
           <div class="row between"><button class="btn" id="bk2Test">测试</button><button class="btn primary" id="bk2Save">保存线路</button></div>
+        </div>
+        <div class="card" id="bk3Card">
+          <h4>备用线路 3</h4>
+          <p class="note">接入 OpenAI 兼容的 API。填好地址和 Key 后会自动获取模型，选择喜欢的模型，再保存线路。</p>
+          <label class="label" for="bk3Url">API 地址</label>
+          <input class="field" id="bk3Url" type="text" autocomplete="off" placeholder="https://api.deepseek.com/v1">
+          <label class="label" for="bk3Key">API Key</label>
+          <input class="field" id="bk3Key" type="password" autocomplete="off" placeholder="sk-...">
+          <div class="row between" style="margin-top:14px"><label class="label" for="bk3Select" style="margin:0">选择模型</label><button class="btn" id="bk3FetchModels" type="button">获取模型</button></div>
+          <div id="bk3ModelPicker" hidden style="margin-top:10px">
+            <input class="field" id="bk3ModelSearch" type="search" autocomplete="off" placeholder="搜索模型，比如 Claude、Sonnet" aria-label="搜索模型">
+            <select class="field" id="bk3Select" style="margin-top:8px" aria-label="选择模型"></select>
+          </div>
+          <p class="note" id="bk3ModelsNote" role="status" aria-live="polite">也可以点击获取模型；接口不提供列表时，手动填写即可。</p>
+          <label class="label" for="bk3Model">模型名称 · 可手动填写</label>
+          <input class="field" id="bk3Model" type="text" autocomplete="off" placeholder="选择上面的模型，或输入模型 ID">
+          <label class="label" for="bk3MaxTokens">最大输出长度</label>
+          <input class="field" id="bk3MaxTokens" type="number" inputmode="numeric" min="256" max="4000" step="1" value="2048" placeholder="默认 2048">
+          <p class="note">默认 2048，最多 4000 tokens。这是单次回复的上限，不是每次都会用满；思考模型的思考过程也可能占用额度。</p>
+          <div class="chips" style="margin-top:14px"><button class="chip" id="bk3Memory">用它整理记忆</button></div>
+          <div class="note" id="bk3Note" style="margin-top:10px"></div>
+          <div class="row between"><button class="btn" id="bk3Test">测试</button><button class="btn primary" id="bk3Save">保存线路</button></div>
         </div>
         <div class="card" id="presenceCard">
           <h4>时间、天气与主动消息</h4>
@@ -556,6 +578,6 @@ textarea.field.tall { min-height: 190px; }
 <script src="/app/monopoly.js?v=1"></script>
 <script src="/app/reply-bubbles.js?v=1"></script>
 <script src="/app/presence.js?v=1"></script>
-<script src="/app/app.js?v=presence1"></script>
+<script src="/app/app.js?v=route3"></script>
 </body>
 </html>

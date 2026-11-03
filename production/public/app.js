@@ -3,7 +3,7 @@ const EMOJIS = ['😊','🥰','😘','🥹','🥺','😌','😏','😴','🐰','
 const BGS = [['damask', '花纹', 'var(--blush) var(--damask)'], ['ivory', '象牙', 'var(--ivory)'], ['rose', '蔷薇', 'linear-gradient(170deg,#fdf3f1,#f7e2e3)'], ['sky', '雾蓝', 'linear-gradient(170deg,#f6f6fb,#e9eef7)']];
 for (const [key,label] of [['cream','奶油粉纸纹'],['letter','淡玫瑰信笺'],['moon','雾蓝月夜'],['sage','鼠尾草小花']]) BGS.push([key,label,`#fffdf9 url(/app/backgrounds/${key}.jpg) center / cover`]);
 let backgroundSaving = false;
-const routeDirty={bk:false,bk2:false};
+const routeDirty={bk:false,bk2:false,bk3:false};
 const MODELS = [['default', '跟随订阅默认'], ['opus', 'Opus'], ['sonnet', 'Sonnet'], ['haiku', 'Haiku']];
 const ROSE = `<svg viewBox="0 0 120 120" role="img" aria-label="小花"><circle cx="60" cy="60" r="60" fill="#f1e3bf"/><circle cx="60" cy="60" r="55.500" fill="#fdeeee"/><g fill="#f6c3cd" stroke="#e3a9b5" stroke-width="1.500"><circle cx="60" cy="40" r="15"/><circle cx="79" cy="54" r="15"/><circle cx="72" cy="76" r="15"/><circle cx="48" cy="76" r="15"/><circle cx="41" cy="54" r="15"/></g><circle cx="60" cy="60" r="10" fill="#fff6e6" stroke="#b3935a" stroke-width="1.500"/></svg>`;
 const ICON = {
@@ -90,7 +90,7 @@ function renderChat(keepScroll) {
       const who = m.role === 'me' ? 'me' : 'him';
       const parts = m.type === 'sticker' ? [] : who === 'him' ? window.splitChatReply(displayReplyText(m.text)) : (m.text ? [m.text] : []);
       const src = m.localImage || (m.image ? fileUrl(m.image) : m.recovered_sticker?.image ? fileUrl(m.recovered_sticker.image) : '');
-      html += `<div class="msg ${who}" data-message="${esc(m.id)}"><span class="av">${avatar(who)}</span><div class="col">${src ? `<img class="${m.type==='sticker'||m.recovered_sticker?'sticker-img':'pic'}" src="${esc(src)}" alt="${m.type==='sticker'||m.recovered_sticker?'表情':'图片'}" loading="lazy">` : ''}${m.quote_text ? `<div class="msg-quote">${esc(m.quote_role === 'me' ? '我' : hisName())}：${esc(m.quote_text)}</div>` : ''}${parts.map((p) => `<div class="bubble">${rich(p.trim())}</div>`).join('')}${who === 'him' && m.type !== 'sticker' && m.text?.trim() && typeof m.id === 'number' ? `<button type="button" class="voice-play" data-voice="${m.id}" aria-label="朗读这条回复">▷ 听这句</button>` : ''}${typeof m.id === 'number' ? `<div class="message-actions"><button data-quote="${m.id}">引用</button><button data-collect="${m.id}">收藏</button><button data-more="${m.id}" aria-label="消息操作">···</button></div>` : ''}<time>${hm(m.ts)}${m.src === 'backup2' ? ' · 备用线路 2' : m.src === 'backup' ? ' · 备用线路 1' : ''}</time></div></div>`;
+      html += `<div class="msg ${who}" data-message="${esc(m.id)}"><span class="av">${avatar(who)}</span><div class="col">${src ? `<img class="${m.type==='sticker'||m.recovered_sticker?'sticker-img':'pic'}" src="${esc(src)}" alt="${m.type==='sticker'||m.recovered_sticker?'表情':'图片'}" loading="lazy">` : ''}${m.quote_text ? `<div class="msg-quote">${esc(m.quote_role === 'me' ? '我' : hisName())}：${esc(m.quote_text)}</div>` : ''}${parts.map((p) => `<div class="bubble">${rich(p.trim())}</div>`).join('')}${who === 'him' && m.type !== 'sticker' && m.text?.trim() && typeof m.id === 'number' ? `<button type="button" class="voice-play" data-voice="${m.id}" aria-label="朗读这条回复">▷ 听这句</button>` : ''}${typeof m.id === 'number' ? `<div class="message-actions"><button data-quote="${m.id}">引用</button><button data-collect="${m.id}">收藏</button><button data-more="${m.id}" aria-label="消息操作">···</button></div>` : ''}<time>${hm(m.ts)}${m.src === 'backup3' ? ' · 备用线路 3' : m.src === 'backup2' ? ' · 备用线路 2' : m.src === 'backup' ? ' · 备用线路 1' : ''}</time></div></div>`;
     }
     if (!S.busy && S.msgs[S.msgs.length - 1].role === 'me') html += '<button class="retry" id="retry">再叫他一声</button>';
     box.innerHTML = html;
@@ -333,7 +333,7 @@ function applyState() {
   $('#models').innerHTML = MODELS.map(([k, label]) => `<button class="chip ${(S.profile.model || 'default') === k ? 'on' : ''}" data-model="${k}">${label}</button>`).join('');
   $('#claudeNote').textContent = S.claude.lastError === 'needs_login' ? '服务器上的 Claude 还没有登录订阅账号，登录后他才能回你。' : (S.claude.running ? '他醒着，用的是你的 Claude 订阅。' : '他会在你发下一句话时醒来，用的是你的 Claude 订阅。');
   $('#claudeNote').className = 'note' + (S.claude.lastError === 'needs_login' ? ' err' : '');
-  for(const [prefix,key]of [['bk','backup'],['bk2','backup2']])if(!routeDirty[prefix])$('#'+prefix+'Memory').classList.toggle('on',!!S[key]?.memory);
+  for(const [prefix,key]of [['bk','backup'],['bk2','backup2'],['bk3','backup3']])if(!routeDirty[prefix])$('#'+prefix+'Memory').classList.toggle('on',!!S[key]?.memory);
   document.querySelectorAll('[data-chat-route]').forEach(b=>{const on=b.dataset.chatRoute===(S.chatRoute||(S.backup.chat?'backup':'subscription'));b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on));});
   window.PhonePresence?.update(S.presence);
   $('#storeInfo').textContent = `聊天记录、记忆、日记和朋友圈都保存在你自己的服务器上，每天自动备份一份。目前共 ${S.counts.messages} 条消息。`;
@@ -344,7 +344,7 @@ function fillForms() {
   fillVoice();
   $('#emotionEnabled').checked = !!S.profile.emotionEnabled; $('#emotionRules').value = S.profile.emotionRules || '';
   $('#hisName').value = hisName(); if (!personaDirty) $('#persona').value = S.profile.persona || ''; $('#memText').value = S.memory || '';
-  for(const [prefix,key]of [['bk','backup'],['bk2','backup2']]) {
+  for(const [prefix,key]of [['bk','backup'],['bk2','backup2'],['bk3','backup3']]) {
     if(routeDirty[prefix])continue;const config=S[key]||{};
     $('#'+prefix+'Url').value=config.baseUrl||'';$('#'+prefix+'Model').value=config.model||'';
     $('#'+prefix+'Key').value='';$('#'+prefix+'Key').placeholder=config.hasKey?'已保存，留空则不改':'sk-...';
@@ -352,7 +352,7 @@ function fillForms() {
   }
   window.PhonePresence?.fill();
 }
-async function refreshState() { const st = await api('/api/state'); Object.assign(S, { lifePrefs: st.lifePrefs || {}, voice: st.voice || {}, profile: st.profile, memory: st.memory, backup: st.backup,backup2:st.backup2||{},chatRoute:st.chatRoute,presence:st.presence, counts: st.counts, since: st.since, claude: st.claude }); applyState(); return st; }
+async function refreshState() { const st = await api('/api/state'); Object.assign(S, { lifePrefs: st.lifePrefs || {}, voice: st.voice || {}, profile: st.profile, memory: st.memory, backup: st.backup,backup2:st.backup2||{},backup3:st.backup3||{},chatRoute:st.chatRoute,presence:st.presence, counts: st.counts, since: st.since, claude: st.claude }); applyState(); return st; }
 async function saveProfile(patch, quiet) { try { S.profile = (await api('/api/profile', 'PUT', patch)).profile; if (Object.hasOwn(patch, 'persona')) personaDirty = $('#persona').value !== patch.persona; applyState(); renderChat(); if (!quiet) toast('保存好了'); return true; } catch (e) { toast(e.message); return false; } }
 
 function go(page) {
@@ -462,7 +462,7 @@ function wire() {
   $('#saveSettings').onclick = async (e) => { const btn = e.currentTarget; btn.disabled = true; try { if (await saveProfile({ hisName: $('#hisName').value, persona: $('#persona').value, emotionEnabled: $('#emotionEnabled').checked, emotionRules: $('#emotionRules').value })) go('chat'); } finally { btn.disabled = false; } };
 
   window.PhonePresence?.init({api,toast});
-  for(const [prefix,key]of [['bk','backup'],['bk2','backup2']]) {
+  for(const [prefix,key]of [['bk','backup'],['bk2','backup2'],['bk3','backup3']]) {
     const get=id=>$('#'+prefix+id),endpoint='/api/'+key;
     wireBackupModels(prefix,endpoint,()=>S[key]||{});
     $('#'+prefix+'Card').addEventListener('input',()=>routeDirty[prefix]=true);
