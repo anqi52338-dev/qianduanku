@@ -476,6 +476,7 @@ textarea.field.tall { min-height: 190px; }
           <p class="note" id="bkModelsNote" role="status" aria-live="polite">也可以点击获取模型；接口不提供列表时，手动填写即可。</p>
           <label class="label" for="bkModel">模型名称 · 可手动填写</label>
           <input class="field" id="bkModel" type="text" autocomplete="off" placeholder="选择上面的模型，或输入模型 ID">
+          <label class="label"><input type="checkbox" id="bkCacheEnabled" checked> Claude 显式缓存 · 5分钟</label><p class="note">复用稳定提示词；首次写入可能收费更高。非Claude模型保持服务商自动缓存；不兼容时可关闭。</p><p class="note" id="bkCacheStats" role="status">尚无接口返回的缓存统计</p>
           <label class="label" for="bkMaxTokens">最大输出长度</label>
           <input class="field" id="bkMaxTokens" type="number" inputmode="numeric" min="256" max="4000" step="1" value="2048" placeholder="默认 2048">
           <p class="note">默认 2048，最多 4000 tokens。这是单次回复的上限，不是每次都会用满；思考模型的思考过程也可能占用额度。</p>
@@ -498,6 +499,7 @@ textarea.field.tall { min-height: 190px; }
           <p class="note" id="bk2ModelsNote" role="status" aria-live="polite">也可以点击获取模型；接口不提供列表时，手动填写即可。</p>
           <label class="label" for="bk2Model">模型名称 · 可手动填写</label>
           <input class="field" id="bk2Model" type="text" autocomplete="off" placeholder="选择上面的模型，或输入模型 ID">
+          <label class="label"><input type="checkbox" id="bk2CacheEnabled" checked> Claude 显式缓存 · 5分钟</label><p class="note">复用稳定提示词；首次写入可能收费更高。非Claude模型保持服务商自动缓存；不兼容时可关闭。</p><p class="note" id="bk2CacheStats" role="status">尚无接口返回的缓存统计</p>
           <label class="label" for="bk2MaxTokens">最大输出长度</label>
           <input class="field" id="bk2MaxTokens" type="number" inputmode="numeric" min="256" max="4000" step="1" value="2048" placeholder="默认 2048">
           <p class="note">默认 2048，最多 4000 tokens。这是单次回复的上限，不是每次都会用满；思考模型的思考过程也可能占用额度。</p>
@@ -520,6 +522,7 @@ textarea.field.tall { min-height: 190px; }
           <p class="note" id="bk3ModelsNote" role="status" aria-live="polite">也可以点击获取模型；接口不提供列表时，手动填写即可。</p>
           <label class="label" for="bk3Model">模型名称 · 可手动填写</label>
           <input class="field" id="bk3Model" type="text" autocomplete="off" placeholder="选择上面的模型，或输入模型 ID">
+          <label class="label"><input type="checkbox" id="bk3CacheEnabled" checked> Claude 显式缓存 · 5分钟</label><p class="note">复用稳定提示词；首次写入可能收费更高。非Claude模型保持服务商自动缓存；不兼容时可关闭。</p><p class="note" id="bk3CacheStats" role="status">尚无接口返回的缓存统计</p>
           <label class="label" for="bk3MaxTokens">最大输出长度</label>
           <input class="field" id="bk3MaxTokens" type="number" inputmode="numeric" min="256" max="4000" step="1" value="2048" placeholder="默认 2048">
           <p class="note">默认 2048，最多 4000 tokens。这是单次回复的上限，不是每次都会用满；思考模型的思考过程也可能占用额度。</p>
@@ -578,6 +581,6 @@ textarea.field.tall { min-height: 190px; }
 <script src="/app/monopoly.js?v=1"></script>
 <script src="/app/reply-bubbles.js?v=1"></script>
 <script src="/app/presence.js?v=1"></script>
-<script src="/app/app.js?v=route3"></script>
+<script src="/app/app.js?v=cache1"></script>
 </body>
 </html>

@@ -335,6 +335,7 @@ function applyState() {
   $('#claudeNote').className = 'note' + (S.claude.lastError === 'needs_login' ? ' err' : '');
   for(const [prefix,key]of [['bk','backup'],['bk2','backup2'],['bk3','backup3']])if(!routeDirty[prefix])$('#'+prefix+'Memory').classList.toggle('on',!!S[key]?.memory);
   document.querySelectorAll('[data-chat-route]').forEach(b=>{const on=b.dataset.chatRoute===(S.chatRoute||(S.backup.chat?'backup':'subscription'));b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on));});
+  for(const [prefix,key]of [['bk','backup'],['bk2','backup2'],['bk3','backup3']]){const u=S[key]?.cacheUsage;$('#'+prefix+'CacheStats').textContent=!u?'尚无接口返回的缓存统计':!u.reported?'最近一次请求：接口未返回缓存明细，无法判断命中率':`最近一次：读取 ${u.readTokens??'未报告'} / 写入 ${u.writeTokens??'未报告'} tokens，读取占输入 ${u.readPercent===null?'无法计算':u.readPercent.toFixed(2)+'%'}。以站子账单为准。`;}
   window.PhonePresence?.update(S.presence);
   $('#storeInfo').textContent = `聊天记录、记忆、日记和朋友圈都保存在你自己的服务器上，每天自动备份一份。目前共 ${S.counts.messages} 条消息。`;
   $('#memNote').textContent = S.counts.pending > 2 ? `还有 ${S.counts.pending} 条新对话没整理进记忆，满 60 条会自动整理。` : '最近的事他都还记着。';
@@ -349,6 +350,7 @@ function fillForms() {
     $('#'+prefix+'Url').value=config.baseUrl||'';$('#'+prefix+'Model').value=config.model||'';
     $('#'+prefix+'Key').value='';$('#'+prefix+'Key').placeholder=config.hasKey?'已保存，留空则不改':'sk-...';
     $('#'+prefix+'MaxTokens').value=config.maxTokens||2048;
+    $('#'+prefix+'CacheEnabled').checked=config.cacheEnabled!==false;
   }
   window.PhonePresence?.fill();
 }
@@ -468,7 +470,7 @@ function wire() {
     $('#'+prefix+'Card').addEventListener('input',()=>routeDirty[prefix]=true);
     $('#'+prefix+'Card').addEventListener('change',()=>routeDirty[prefix]=true);
     get('Memory').onclick=e=>{e.currentTarget.classList.toggle('on');routeDirty[prefix]=true;};
-    const save=async()=>{const maxTokens=get('MaxTokens').value.trim()===''?2048:Number(get('MaxTokens').value);if(!Number.isInteger(maxTokens)||maxTokens<256||maxTokens>4000)throw new Error('最大输出长度请填 256 到 4000 之间的整数');await api(endpoint,'PUT',{baseUrl:get('Url').value,model:get('Model').value,key:get('Key').value,maxTokens,memory:get('Memory').classList.contains('on')});routeDirty[prefix]=false;await refreshState();fillForms();};
+    const save=async()=>{const maxTokens=get('MaxTokens').value.trim()===''?2048:Number(get('MaxTokens').value);if(!Number.isInteger(maxTokens)||maxTokens<256||maxTokens>4000)throw new Error('最大输出长度请填 256 到 4000 之间的整数');await api(endpoint,'PUT',{baseUrl:get('Url').value,model:get('Model').value,key:get('Key').value,maxTokens,memory:get('Memory').classList.contains('on'),cacheEnabled:get('CacheEnabled').checked});routeDirty[prefix]=false;await refreshState();fillForms();};
     get('Save').onclick=async e=>{const b=e.currentTarget;b.disabled=true;try{await save();get('Note').textContent='线路已保存，点击上方线路开关即可使用。';toast('线路保存好了');}catch(err){get('Note').textContent=err.message;get('Note').className='note err';}finally{b.disabled=false;}};
     get('Test').onclick=async e=>{const b=e.currentTarget,n=get('Note');b.disabled=true;n.className='note';n.textContent='测试中…';try{await save();const r=await api(endpoint+'/test','POST',{});n.className='note ok';n.textContent='连上了，它回了：'+r.text;}catch(err){n.className='note err';n.textContent='没连上：'+err.message;}finally{b.disabled=false;}};
   }
