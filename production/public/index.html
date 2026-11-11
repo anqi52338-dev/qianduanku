@@ -287,6 +287,7 @@ textarea.field.tall { min-height: 190px; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 @media (prefers-reduced-motion: reduce) { * { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
 </style>
+<link rel="stylesheet" href="/app/worldbook.css?v=1">
 <link rel="stylesheet" href="/app/candy.css?v=1">
 <link rel="stylesheet" href="/app/reading.css?v=1">
 <link rel="stylesheet" href="/app/monopoly.css?v=1">
@@ -345,6 +346,7 @@ textarea.field.tall { min-height: 190px; }
         <button class="tool" id="toolImg" aria-label="发图片"></button>
         <button class="tool" id="toolEmoji" aria-label="表情"></button>
         <button class="tool" id="openHistory" aria-label="搜索聊天记录"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/></svg></button>
+        <button class="tool" id="openWorldbook" aria-label="打开世界书" title="世界书"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 3h13a2 2 0 0 1 2 2v16H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2ZM7 3v18M10 8h6M10 12h6"/></svg></button>
         <button class="tool" id="openLife" aria-label="打开生活手账"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="3" width="15" height="18" rx="2"/><path d="M8 3v18M3 7h4M3 12h4M3 17h4M11 9h6M11 14h6"/></svg></button>
         
       </div>
@@ -404,10 +406,27 @@ textarea.field.tall { min-height: 190px; }
       <div class="st-library-grid" id="stkList"></div><p class="note">我的表情可以选入待发送区；他的表情由他自己选择。收起的表情随时能放回来，历史消息仍会保留。</p></div></section>
     <section class="page" data-page="life"><div class="page-head"><em>Little Keepsakes</em><h3>生活手账</h3><div class="flourish"><i></i></div></div><div class="page-body" id="lifeRoot"></div></section>
     <section class="page" data-page="history"><div class="page-head"><em>Our Words</em><h3>往日的话</h3><div class="flourish"><i></i></div></div><div class="page-body" id="historyRoot"></div></section>
+    <section class="page" data-page="worldbook">
+      <div class="page-head"><em>Our World, Our Stories</em><h3>世界书</h3><div class="flourish"><i></i></div></div>
+      <div class="page-body">
+        <div class="wb-actions"><button type="button" class="btn" id="wbBack">返回聊天</button><button type="button" class="btn" id="wbReload">重新载入</button><button type="button" class="btn primary" id="wbSave" disabled>保存全部修改</button></div>
+        <p class="note" id="wbStatus" role="status">尚未读取</p><p class="note" id="wbNote" role="status"></p>
+        <fieldset class="wb-tools" id="wbWorkspace">
+        <div class="card"><h4>聊天使用的方案</h4><label class="label" for="wbActive">启用方案</label><select class="field" id="wbActive"><option value="">关闭世界书</option></select><p class="note">选择方案后点“保存全部修改”，下一条普通聊天和主动消息就会参考其中的设定。其他方案会留在这里，随时切换。仅勾选的世界书会随请求发送，内容越长，用量越多。独立窗口不读取世界书。</p></div>
+        <div class="card"><h4>我的世界书</h4><div class="wb-actions"><button type="button" class="btn" id="wbNewBook">＋ 新建世界书</button></div><div class="chips" id="wbBooks"></div>
+          <div id="wbBookEditor" hidden><label class="label" for="wbBookName">世界书名称</label><input class="field" id="wbBookName" maxlength="60" placeholder="例如：我们的日常设定"><label class="label" for="wbContent">内容</label><textarea class="field" id="wbContent" maxlength="20000" placeholder="填写角色背景、关系、地点、故事或共同的约定……"></textarea><p class="note">每本最多 20000 字。写好后，在下面的方案中勾选它。</p><button type="button" class="btn" id="wbDeleteBook">删除这本世界书</button></div>
+        </div>
+        <div class="card"><h4>我的方案</h4><div class="wb-actions"><button type="button" class="btn" id="wbNewScheme">＋ 新建方案</button></div><div class="chips" id="wbSchemes"></div>
+          <div id="wbSchemeEditor" hidden><label class="label" for="wbSchemeName">方案名称</label><input class="field" id="wbSchemeName" maxlength="60" placeholder="例如：日常 / 旅行 / 故事"><p class="note">选中这个方案要搭配的世界书；同一本可以用在多个方案里，按勾选顺序发送。</p><div id="wbMembers"></div><div class="wb-actions"><button type="button" class="btn" id="wbDeleteScheme">删除这个方案</button></div></div>
+        </div>
+        </fieldset>
+      </div>
+    </section>
     <section class="page" data-page="settings">
       <div class="page-head"><em>Boudoir</em><h3>设置</h3><div class="flourish"><i></i></div></div>
       <div class="page-body">
         <div class="card">
+          <button type="button" class="btn wb-entry" id="settingsWorldbook">世界书 ›<small>管理多本设定书与聊天方案</small></button>
           <h4>头像与称呼</h4>
           <div class="picks">
             <button class="pick" id="pickMe"><span class="av" id="setMeAv"></span>我的头像</button>
@@ -573,14 +592,15 @@ textarea.field.tall { min-height: 190px; }
   <input type="file" id="fileStk" accept="image/gif,image/webp" hidden>
   <div class="toast" id="toast" role="status"></div>
 </div>
-<script src="/app/bunny.js"></script>
-<script src="/app/reading.js?v=1"></script>
-<script src="/app/life.js?v=1"></script>
-<script src="/app/candy.js?v=1"></script>
-<script src="/app/mobile.js?v=1"></script>
-<script src="/app/monopoly.js?v=1"></script>
-<script src="/app/reply-bubbles.js?v=1"></script>
-<script src="/app/presence.js?v=1"></script>
-<script src="/app/app.js?v=cache1"></script>
+<script defer src="/app/bunny.js"></script>
+<script defer src="/app/reading.js?v=1"></script>
+<script defer src="/app/life.js?v=1"></script>
+<script defer src="/app/candy.js?v=1"></script>
+<script defer src="/app/mobile.js?v=1"></script>
+<script defer src="/app/monopoly.js?v=1"></script>
+<script defer src="/app/reply-bubbles.js?v=1"></script>
+<script defer src="/app/presence.js?v=1"></script>
+<script defer src="/app/worldbook.js?v=1"></script>
+<script defer src="/app/app.js?v=entry2"></script>
 </body>
 </html>

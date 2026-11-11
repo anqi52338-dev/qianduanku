@@ -362,8 +362,9 @@ function go(page) {
   if (page === 'candy') window.CandyJar?.open();
   if (S.page === 'reading' && page !== 'reading') window.Coread?.leave();
   if (page === 'reading') window.Coread?.open();
+  if (page === 'worldbook') window.Worldbook?.open();
   if (page === 'monopoly') window.CoupleBoard?.open();
-  if (page === 'stickers') renderStickers();
+  if (page === 'stickers') { renderStickers(); api('/api/stickers').then(data => {S.stickers=data.stickers;renderStickers();}).catch(e=>toast(e.message)); }
   if (page === 'life' || page === 'history') window.Life?.open(page);
   S.page = page;
   document.querySelectorAll('.page').forEach((p) => p.classList.toggle('show', p.dataset.page === page));
@@ -376,6 +377,7 @@ function go(page) {
 
 // ===== 事件 =====
 function wire() {
+  window.Worldbook?.init({api,toast,go});
   window.CoupleBoard?.init({api,toast,profile:()=>S.profile});
   window.CandyJar?.init({ api, toast, go, draft: text => { go('chat'); $('#input').value = text; setComposer(); $('#input').focus(); } });
   $('#openCandy').onclick = () => go('candy');
@@ -583,8 +585,9 @@ function startIncoming(){
 }
 // ===== 进门 =====
 async function boot() {
-  const [st, , stickers] = await Promise.all([refreshState(), loadMessages(), api('/api/stickers')]);
-  S.stickers = stickers.stickers; fillForms(); renderStickers(); setComposer(); renderChat();
+  const [st] = await Promise.all([refreshState(), loadMessages()]);
+  fillForms(); setComposer(); renderChat();
+  api('/api/stickers').then(data => { S.stickers = data.stickers; renderStickers(); }).catch(() => toast('表情包暂未加载，可点表情盒重试')); 
   $('#gate').hidden = true;
   const btn = $('#enter'); btn.disabled = false; btn.textContent = '进入';
   btn.onclick = () => { $('#cover').classList.add('gone'); const box = $('#msgs'); box.scrollTop = box.scrollHeight; };
@@ -618,5 +621,6 @@ async function gate() {
 
 $('#coverCameo').innerHTML = Bunny.cover();
 wire(); setComposer(); applyState(); renderChat();
-gate();
+function enterHome(){gate().catch(()=>{ const btn=$('#enter');btn.disabled=false;btn.textContent='重新加载';$('#coverFoot').textContent='加载暂未完成，点这里重试';btn.onclick=enterHome; });}
+enterHome();
 })();
