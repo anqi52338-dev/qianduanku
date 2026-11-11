@@ -40,25 +40,25 @@ const hisName = () => S.profile.hisName || '哥哥';
 const avatar = (who) => { const name = who === 'me' ? S.profile.myAv : S.profile.hisAv; return name ? `<img src="${fileUrl(name)}" alt="">` : (who === 'me' ? ROSE : Bunny.avatar()); };
 
 // ===== 图片 =====
-function shrink(file, max, cap) {
+function shrink(file, max, cap, balanced = false) {
   return new Promise((res, rej) => {
     const img = new Image(); const url = URL.createObjectURL(file);
     img.onload = () => {
-      let scale = Math.min(1, max / Math.max(img.width, img.height)), q = 0.84, out = '';
+      let scale = Math.min(1, max / Math.max(img.width, img.height)), q = balanced ? 0.86 : 0.84, out = '';
       for (let k = 0; k < 6; k++) {
         const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(img.width * scale)); c.height = Math.max(1, Math.round(img.height * scale));
-        const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
-        out = c.toDataURL('image/jpeg', q); if (out.length <= cap) break; scale *= 0.75; q -= 0.07;
+        const g = c.getContext('2d'); if (balanced) { g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; } g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+        out = c.toDataURL('image/jpeg', q); if (out.length <= cap) break; if (balanced) { if (k < 2) q -= 0.06; else { scale *= 0.88; q = 0.78; } } else { scale *= 0.75; q -= 0.07; }
       }
-      URL.revokeObjectURL(url); res(out);
+      URL.revokeObjectURL(url); if (balanced && out.length > cap) return rej(new Error('image too large')); res(out);
     };
     img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('bad image')); };
     img.src = url;
   });
 }
-const pick = (input, max, cap, cb) => input.addEventListener('change', async () => {
+const pick = (input, max, cap, cb, balanced = false) => input.addEventListener('change', async () => {
   const f = input.files[0]; input.value = ''; if (!f) return;
-  try { cb(await shrink(f, max, cap)); } catch { toast('这张图打不开，换一张试试'); }
+  try { cb(await shrink(f, max, cap, balanced)); } catch { toast('这张图打不开，换一张试试'); }
 });
 
 function setQuote(message) {
@@ -413,7 +413,7 @@ function wire() {
   $('#emojiGrid').onclick = (e) => { if (e.target.tagName === 'BUTTON') { input.value += e.target.textContent; input.focus(); } };
   $('#emojiSt').onclick = (e) => { if (e.target.closest('[data-stk]')) sendSticker(e.target.closest('[data-stk]').dataset.stk); else if (e.target.closest('#stkManage')) { $('#emoji').hidden = true; go('stickers'); } };
   $('#pendingX').onclick = () => { S.pending = null; $('#pending').hidden = true; setComposer(); };
-  pick($('#fileChat'), 1400, 600000, (d) => { S.pendingSticker = null; renderPendingSticker(); S.pending = d; setComposer(); $('#pendingImg').src = d; $('#pending').hidden = false; });
+  pick($('#fileChat'), 1536, 900000, (d) => { S.pendingSticker = null; renderPendingSticker(); S.pending = d; setComposer(); $('#pendingImg').src = d; $('#pending').hidden = false; }, true);
 
   $('#msgs').onclick = async (e) => {
     const quoteBtn = e.target.closest('[data-quote]'), collectBtn = e.target.closest('[data-collect]'), moreBtn = e.target.closest('[data-more]');
