@@ -346,6 +346,7 @@ textarea.field.tall { min-height: 190px; }
         <button class="tool" id="toolImg" aria-label="发图片"></button>
         <button class="tool" id="toolEmoji" aria-label="表情"></button>
         <button class="tool" id="openHistory" aria-label="搜索聊天记录"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/></svg></button>
+        <button class="tool" id="openDouyin" aria-label="他的抖音" title="他的抖音"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="16" rx="4"/><path d="m10 8 6 4-6 4Z"/></svg></button>
         <button class="tool" id="openWorldbook" aria-label="打开世界书" title="世界书"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 3h13a2 2 0 0 1 2 2v16H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2ZM7 3v18M10 8h6M10 12h6"/></svg></button>
         <button class="tool" id="openLife" aria-label="打开生活手账"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="3" width="15" height="18" rx="2"/><path d="M8 3v18M3 7h4M3 12h4M3 17h4M11 9h6M11 14h6"/></svg></button>
         
@@ -406,7 +407,11 @@ textarea.field.tall { min-height: 190px; }
       <div class="st-library-grid" id="stkList"></div><p class="note">我的表情可以选入待发送区；他的表情由他自己选择。收起的表情随时能放回来，历史消息仍会保留。</p></div></section>
     <section class="page" data-page="life"><div class="page-head"><em>Little Keepsakes</em><h3>生活手账</h3><div class="flourish"><i></i></div></div><div class="page-body" id="lifeRoot"></div></section>
     <section class="page" data-page="history"><div class="page-head"><em>Our Words</em><h3>往日的话</h3><div class="flourish"><i></i></div></div><div class="page-body" id="historyRoot"></div></section>
-    <section class="page" data-page="worldbook">
+    <section class="page" data-page="douyin"><div class="page-head"><em>His Little Discoveries</em><h3>他的抖音</h3><div class="flourish"><i></i></div></div><div class="page-body">
+<div class="row"><button class="btn" id="dyBack">返回聊天</button><button class="btn" id="dyRefresh">刷新状态</button></div><p class="note" id="dyStatus" role="status"></p><p class="note" id="dyNote" role="status"></p>
+<fieldset id="dyControls" style="border:0;padding:0;min-width:0"><div class="card" id="dyPrefs"><h4>浏览与主动分享</h4><label class="wb-member"><input type="checkbox" id="dyBrowse">空闲时自动浏览推荐</label><label class="wb-member"><input type="checkbox" id="dyShare">允许他在聊天里分享发现</label><p class="note">服务器运行，电脑关机后也能执行。空闲时最多每 6 小时浏览一次；主动分享沿用设置里的主动消息开关、空闲时间和每日上限，不会另外增加发送次数。目前读取推荐卡片标题和简介，不代表已看完整视频或听懂声音。</p><h4>他的原创作品</h4><label class="wb-member"><input type="checkbox" id="dyAutoPost">每天自动创作并发布一篇原创图文</label><label class="label" for="dyHour">每天几点后发布 · 北京时间</label><input class="field" id="dyHour" type="number" min="0" max="23" value="19"><label class="label" for="dyThemes">创作方向</label><textarea class="field" id="dyThemes" maxlength="1000"></textarea><p class="note">先生成草稿查看，再按需开启自动发布。每天最多一次发布尝试；失败或结果不明时暂停，不反复重试。仅创作原创文字配卡片图并标注 AI，不搬运视频，不读取私聊和记忆库来公开发文。创作使用当前聊天线路，会消耗额度，每天最多 5 次草稿尝试。图文发布仍受抖音验证与审核影响。</p><button class="btn primary" id="dySave">保存抖音设置</button></div>
+<div class="row" style="flex-wrap:wrap;gap:8px"><button class="btn" id="dyBrowseNow">浏览一次</button><button class="btn" id="dyDraftNow">生成原创草稿</button></div><h4>他的发现</h4><div id="dyItems"></div><h4>原创作品与草稿</h4><div id="dyDrafts"></div></fieldset><div class="card"><h4>最近的操作</h4><p class="note" id="dyLog" style="white-space:pre-wrap"></p><p class="note">遇到登录或人机验证需你处理；状态显示暂停时，他不会假装仍在正常浏览或已成功发布。</p></div></div></section>
+<section class="page" data-page="worldbook">
       <div class="page-head"><em>Our World, Our Stories</em><h3>世界书</h3><div class="flourish"><i></i></div></div>
       <div class="page-body">
         <div class="wb-actions"><button type="button" class="btn" id="wbBack">返回聊天</button><button type="button" class="btn" id="wbReload">重新载入</button><button type="button" class="btn primary" id="wbSave" disabled>保存全部修改</button></div>
@@ -426,6 +431,7 @@ textarea.field.tall { min-height: 190px; }
       <div class="page-head"><em>Boudoir</em><h3>设置</h3><div class="flourish"><i></i></div></div>
       <div class="page-body">
         <div class="card">
+          <button type="button" class="btn wb-entry" id="settingsDouyin">他的抖音 ›<small>浏览、分享与原创图文</small></button>
           <button type="button" class="btn wb-entry" id="settingsWorldbook">世界书 ›<small>管理多本设定书与聊天方案</small></button>
           <h4>头像与称呼</h4>
           <div class="picks">
@@ -601,6 +607,7 @@ textarea.field.tall { min-height: 190px; }
 <script defer src="/app/reply-bubbles.js?v=1"></script>
 <script defer src="/app/presence.js?v=1"></script>
 <script defer src="/app/worldbook.js?v=1"></script>
-<script defer src="/app/app.js?v=image-balanced1"></script>
+<script defer src="/app/douyin.js?v=1"></script>
+<script defer src="/app/app.js?v=douyin1"></script>
 </body>
 </html>

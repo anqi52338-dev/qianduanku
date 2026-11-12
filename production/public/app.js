@@ -362,6 +362,7 @@ function go(page) {
   if (page === 'candy') window.CandyJar?.open();
   if (S.page === 'reading' && page !== 'reading') window.Coread?.leave();
   if (page === 'reading') window.Coread?.open();
+  if (page === 'douyin') window.HisDouyin?.open();
   if (page === 'worldbook') window.Worldbook?.open();
   if (page === 'monopoly') window.CoupleBoard?.open();
   if (page === 'stickers') { renderStickers(); api('/api/stickers').then(data => {S.stickers=data.stickers;renderStickers();}).catch(e=>toast(e.message)); }
@@ -377,6 +378,7 @@ function go(page) {
 
 // ===== 事件 =====
 function wire() {
+  window.HisDouyin?.init({api,toast,go,chat:async()=>{await loadMessages();renderChat();go('chat');}});
   window.Worldbook?.init({api,toast,go});
   window.CoupleBoard?.init({api,toast,profile:()=>S.profile});
   window.CandyJar?.init({ api, toast, go, draft: text => { go('chat'); $('#input').value = text; setComposer(); $('#input').focus(); } });
